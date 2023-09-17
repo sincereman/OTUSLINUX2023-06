@@ -368,7 +368,7 @@ server-prometheus | SUCCESS => {
 Сознательно разделил vagrant и запуск провижнинга, так как в таком объеме собирал первый раз и требовалось много времени для отладки
 
 
-<summary><details>Ход выполнения скрипта</details>
+<details><summary>Ход выполнения скрипта</summary></details>
 
 prometheus-2.47.0.linux-amd64/
 prometheus-2.47.0.linux-amd64/console_libraries/
@@ -702,7 +702,7 @@ server-prometheus          : ok=5    changed=4    unreachable=0    failed=0    s
 
 
 
-</summary>
+</details>
 
 
 В результате получаем настроенный стенд с сервером Prometheus/Grafana, двумя нодами экспортерами для мониторинга
