@@ -770,6 +770,14 @@ lesson21
 
 ```
 
+Screenshot Prometheus with target
+
+![Alt text](img/Prometheus_target.png)
+В графане сделать Dashboards -> Manage -> Import и введите идентификатор доски 15172 - источник данных Prometheus
+
+Screenshot Grafana with nodeexporters
+
+![Alt text](<img/Sincere - Grafana.png>)
 
 
 
