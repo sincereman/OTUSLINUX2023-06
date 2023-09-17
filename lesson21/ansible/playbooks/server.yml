@@ -1,0 +1,7 @@
+---
+- name: Playbook of server (prometheus) initialization
+  hosts: server
+  ignore_errors: yes
+  become: true
+  roles:
+    - role: '../roles/server'

@@ -1,0 +1,10 @@
+---
+- name: Role config
+  hosts: web
+  gather_facts: false
+  roles:
+    - nginx
+  become: true
+  
+
+      

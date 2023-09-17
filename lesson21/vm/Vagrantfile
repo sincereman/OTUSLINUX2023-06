@@ -1,0 +1,41 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+node_list = [
+    { :host => "server-prometheus", :box => "centos/8",
+        :gui => false, :ip => "192.168.56.10" , :cpu => 2 ,:ram => 2028 },
+    { :host => "client1-nodeexporters", :box => "centos/8",
+        :gui => false, :ip => "192.168.56.11" , :cpu => 1 ,:ram => 1024 },
+    { :host => "client2-nodeexporters", :box => "centos/8",
+        :gui => false, :ip => "192.168.56.12" , :cpu => 1 ,:ram => 1024 },
+]
+
+
+Vagrant.configure("2") do |config|
+
+
+    node_list.each do |node|
+
+
+        config.vm.define node[:host] do |node_config|
+
+
+            node_config.vm.box = node[:box]
+
+
+            node_config.vm.network "private_network", ip: node[:ip], :netmask => "255.255.255.0"
+            node_config.vm.hostname = "#{node[:host]}"
+            node_config.vm.provider :virtualbox do |v|
+                v.name = node[:host].to_s
+
+
+                v.customize ["modifyvm", :id, "--memory", node[:ram].to_s]
+                v.customize ["modifyvm", :id, "--cpus", node[:cpu].to_s]
+            end
+            node_config.vm.provision "shell", inline: <<-SHELL
+            mkdir -p ~root/.ssh; cp ~vagrant/.ssh/auth* ~root/.ssh
+            sed -i '65s/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+            systemctl restart sshd
+          SHELL
+        end
+    end
+end

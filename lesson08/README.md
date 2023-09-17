@@ -1,0 +1,689 @@
+# Lesson 08 - Работа с загрузчиком
+
+## Цель:
+
+научиться попадать в систему без пароля;
+устанавливать систему с LVM и переименовывать в VG;
+добавлять модуль в initrd;
+
+## Описание/Пошаговая инструкция выполнения домашнего задания:
+
+Для выполнения домашнего задания используйте методичку
+Работа с загрузчиком https://drive.google.com/file/d/1-lfwAa6hOC-HVF2Agz9tj21vtKFyjDq7/view?usp=share_link
+
+    Попасть в систему без пароля несколькими способами.
+    Установить систему с LVM, после чего переименовать VG.
+    Добавить модуль в initrd.
+    4(*). Сконфигурировать систему без отдельного раздела с /boot, а только с LVM
+    Репозиторий с пропатченым grub: https://yum.rumyantsev.com/centos/7/x86_64/
+    PV необходимо инициализировать с параметром --bootloaderareasize 1m
+    В чат ДЗ отправьте ссылку на ваш git-репозиторий . Обычно мы проверяем ДЗ в течение 48 часов.
+    Если возникнут вопросы, обращайтесь к студентам, преподавателям и наставникам в канал группы в Telegram.
+
+
+
+## Описание выполнения
+
+
+### 1. Попасть в систему без пароля несколькими способами
+
+
+Создаем VM с опциями как в указанном ниже Vagrantfile
+
+
+```shell
+
+# --- mode: ruby --- 
+# vi: set ft=ruby : vsa
+Vagrant.configure(2) do |config| 
+  config.vm.box = "generic/centos8"
+  config.vm.box_version = "4.2.16"
+  config.vm.provider "virtualbox" do |v| 
+      v.memory = 1024 
+      v.cpus = 2
+  end 
+  config.vm.define "grub" do |grub| 
+    grub.vm.network "private_network", ip: "192.168.56.10",  virtualbox__intnet: "net1" 
+    grub.vm.hostname = "grub"
+  end 
+end
+
+
+
+```
+
+
+```shell
+vagrant up && vagrant ssh 
+sudo reboot
+
+```
+
+### Вариант 1
+
+- при загрузке GRUB меню нажать `e` для перехода к редактированию параметров загрузки
+- найти строку, начинающуюся с `linux`
+- заменить `rhgb quiet` на `init=/bin/bash`
+- нажать `сtrl+x`, чтобы загрузка продолжилась с выбранными опциями. 
+- проверить права на запись `mount | grep root`
+
+Видим что / примонтирован как RO type=xfs
+
+- перемонтировать файловую систему с правами записи:  `mount -o remount,rw /`
+- сменить пароль `passwd root`
+- обновить весь контекст SELinux `touch /.autorelabel`
+- выйти `sync && umount /`
+- `exec /sbin/init`
+
+Проверяем новый пароль для root
+
+### Вариант 2
+
+- при загрузке GRUB меню нажать `e` для перехода к редактированию параметров загрузки
+- пролистать вниз и найти строку, начинающуюся с `linux`
+- заменить `ro` на `rw`, в конце добавляем `rd.break`
+- нажать `Ctrl+x`, чтобы загрузка продолжилась с установленными опциями. 
+- выполнить `chroot /sysroot`
+- сменить пароль `passwd root`
+- обновить весь контекст SELinux `touch /.autorelabel`
+- выполнить `exit`
+- выполнить `exit`
+
+Перезагружаем
+Проверяем новый пароль для root
+
+
+### Вариант 3
+
+- при загрузке GRUB меню нажать `e` для перехода к редактированию параметров загрузки
+- пролистать вниз и найти строку, начинающуюся с `linux16`
+- заменить `ro` на `rw` в конце строки добавляем `init=/sysroot/bin/bash` и стираем `rhgb quiet`
+- нажать `Ctrl+x`, чтобы загрузка продолжилась с установленными опциями. 
+- выполнить `chroot /sysroot`
+- сменить пароль `passwd root`
+- обновить весь контекст SELinux `touch /.autorelabel`
+- выполнить `exit`
+- выполнить `exit`
+- выполнить `reboot`
+
+Проверяем новый пароль для root
+
+Все три варианта выполнились успешно.
+
+### 2. Установить систему с LVM, после чего переименовать VG
+
+
+
+
+## Переименование VG
+
+
+
+
+Выясняем данные по VG:
+
+```shell
+sudo -s
+
+[root@grub ~]# vgs
+  VG         #PV #LV #SN Attr   VSize    VFree
+  cl_centos8   1   2   0 wz--n- <127.00g    0 
+
+ ```
+
+И LV для этой группы:
+
+```shell
+
+[root@grub ~]# lvs cl_centos8
+  LV   VG         Attr       LSize    Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  root cl_centos8 -wi-ao---- <124.94g                                                    
+  swap cl_centos8 -wi-ao----   <2.06g 
+
+ ```
+Переименовываем VG с помощью утилиты __vgrename__ и проверяем результат:
+
+``` shell
+
+[root@grub ~]# vgrename cl_centos8 otuslessonroot
+  Volume group "cl_centos8" successfully renamed to "otuslessonroot"
+
+[root@grub ~]# vgs
+  VG             #PV #LV #SN Attr   VSize    VFree
+  otuslessonroot   1   2   0 wz--n- <127.00g    0 
+
+
+ Проверяем содержимое /etc/fstab и делаем правки:
+
+[root@grub ~]# sed -i 's/cl_centos8/otuslessonroot/g' /etc/fstab
+
+#
+# /etc/fstab
+# Created by anaconda on Wed Mar 29 06:17:23 2023
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk/'.
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info.
+#
+# After editing this file, run 'systemctl daemon-reload' to update systemd
+# units generated from this file.
+#
+/dev/mapper/otuslessonroot-root /                       xfs     defaults        0 0
+UUID=47eaf6bb-229f-4080-b37f-756a57c55aa1 /boot                   xfs     defaults        0 0
+/dev/mapper/otuslessonroot-swap none                    swap    defaults        0 0
+#VAGRANT-BEGIN
+# The contents below are automatically generated by Vagrant. Do not modify.
+#VAGRANT-END
+
+ ```
+
+
+
+Так же, с помощью __sed__ редактируем /etc/default/grub
+```shell
+[root@grub ~]# sed -i 's/cl_centos8/otuslessonroot/g' /etc/default/grub
+[root@grub ~]# cat /etc/default/grub
+GRUB_TIMEOUT=1
+GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
+GRUB_DEFAULT=saved
+GRUB_DISABLE_SUBMENU=true
+GRUB_TERMINAL_OUTPUT="console"
+GRUB_CMDLINE_LINUX="no_timer_check crashkernel=auto resume=/dev/mapper/otuslessonroot-swap rd.lvm.lv=otuslessonroot/root rd.lvm.lv=otuslessonroot/swap biosdevname=0 net.ifnames=0 rhgb quiet"
+GRUB_DISABLE_RECOVERY="true"
+GRUB_ENABLE_BLSCFG=true
+
+```
+И /boot/grub2/grub.cfg:
+
+```shell
+[root@grub ~]# sed -i 's/cl_centos8/otuslessonroot/g' /boot/grub2/grub.cfg
+[root@grub ~]# cat /boot/grub2/grub.cfg 
+#
+# DO NOT EDIT THIS FILE
+#
+# It is automatically generated by grub2-mkconfig using templates
+# from /etc/grub.d and settings from /etc/default/grub
+#
+
+### BEGIN /etc/grub.d/00_header ###
+set pager=1
+
+if [ -f ${config_directory}/grubenv ]; then
+  load_env -f ${config_directory}/grubenv
+elif [ -s $prefix/grubenv ]; then
+  load_env
+fi
+if [ "${next_entry}" ] ; then
+   set default="${next_entry}"
+   set next_entry=
+   save_env next_entry
+   set boot_once=true
+else
+   set default="${saved_entry}"
+fi
+
+if [ x"${feature_menuentry_id}" = xy ]; then
+  menuentry_id_option="--id"
+else
+  menuentry_id_option=""
+fi
+
+export menuentry_id_option
+
+if [ "${prev_saved_entry}" ]; then
+  set saved_entry="${prev_saved_entry}"
+  save_env saved_entry
+  set prev_saved_entry=
+  save_env prev_saved_entry
+  set boot_once=true
+fi
+
+function savedefault {
+  if [ -z "${boot_once}" ]; then
+    saved_entry="${chosen}"
+    save_env saved_entry
+  fi
+}
+
+function load_video {
+  if [ x$feature_all_video_module = xy ]; then
+    insmod all_video
+  else
+    insmod efi_gop
+    insmod efi_uga
+    insmod ieee1275_fb
+    insmod vbe
+    insmod vga
+    insmod video_bochs
+    insmod video_cirrus
+  fi
+}
+
+terminal_output console
+if [ x$feature_timeout_style = xy ] ; then
+  set timeout_style=menu
+  set timeout=1
+# Fallback normal timeout code in case the timeout_style feature is
+# unavailable.
+else
+  set timeout=1
+fi
+### END /etc/grub.d/00_header ###
+
+### BEGIN /etc/grub.d/00_tuned ###
+set tuned_params=""
+set tuned_initrd=""
+### END /etc/grub.d/00_tuned ###
+
+### BEGIN /etc/grub.d/01_users ###
+if [ -f ${prefix}/user.cfg ]; then
+  source ${prefix}/user.cfg
+  if [ -n "${GRUB2_PASSWORD}" ]; then
+    set superusers="root"
+    export superusers
+    password_pbkdf2 root ${GRUB2_PASSWORD}
+  fi
+fi
+### END /etc/grub.d/01_users ###
+
+### BEGIN /etc/grub.d/08_fallback_counting ###
+insmod increment
+# Check if boot_counter exists and boot_success=0 to activate this behaviour.
+if [ -n "${boot_counter}" -a "${boot_success}" = "0" ]; then
+  # if countdown has ended, choose to boot rollback deployment,
+  # i.e. default=1 on OSTree-based systems.
+  if  [ "${boot_counter}" = "0" -o "${boot_counter}" = "-1" ]; then
+    set default=1
+    set boot_counter=-1
+  # otherwise decrement boot_counter
+  else
+    decrement boot_counter
+  fi
+  save_env boot_counter
+fi
+### END /etc/grub.d/08_fallback_counting ###
+
+### BEGIN /etc/grub.d/10_linux ###
+insmod part_msdos
+insmod xfs
+set root='hd0,msdos1'
+if [ x$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=root --hint-bios=hd0,msdos1 --hint-efi=hd0,msdos1 --hint-baremetal=ahci0,msdos1 --hint='hd0,msdos1'  47eaf6bb-229f-4080-b37f-756a57c55aa1
+else
+  search --no-floppy --fs-uuid --set=root 47eaf6bb-229f-4080-b37f-756a57c55aa1
+fi
+insmod part_msdos
+insmod xfs
+set boot='hd0,msdos1'
+if [ x$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=boot --hint-bios=hd0,msdos1 --hint-efi=hd0,msdos1 --hint-baremetal=ahci0,msdos1 --hint='hd0,msdos1'  47eaf6bb-229f-4080-b37f-756a57c55aa1
+else
+  search --no-floppy --fs-uuid --set=boot 47eaf6bb-229f-4080-b37f-756a57c55aa1
+fi
+
+# This section was generated by a script. Do not modify the generated file - all changes
+# will be lost the next time file is regenerated. Instead edit the BootLoaderSpec files.
+#
+# The blscfg command parses the BootLoaderSpec files stored in /boot/loader/entries and
+# populates the boot menu. Please refer to the Boot Loader Specification documentation
+# for the files format: https://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/.
+
+# The kernelopts variable should be defined in the grubenv file. But to ensure that menu
+# entries populated from BootLoaderSpec files that use this variable work correctly even
+# without a grubenv file, define a fallback kernelopts variable if this has not been set.
+#
+# The kernelopts variable in the grubenv file can be modified using the grubby tool or by
+# executing the grub2-mkconfig tool. For the latter, the values of the GRUB_CMDLINE_LINUX
+# and GRUB_CMDLINE_LINUX_DEFAULT options from /etc/default/grub file are used to set both
+# the kernelopts variable in the grubenv file and the fallback kernelopts variable.
+if [ -z "${kernelopts}" ]; then
+  set kernelopts="root=/dev/mapper/otuslessonroot-root ro no_timer_check crashkernel=auto resume=/dev/mapper/otuslessonroot-swap rd.lvm.lv=otuslessonroot/root rd.lvm.lv=otuslessonroot/swap biosdevname=0 net.ifnames=0 rhgb quiet "
+fi
+
+insmod blscfg
+blscfg
+### END /etc/grub.d/10_linux ###
+
+### BEGIN /etc/grub.d/10_reset_boot_success ###
+# Hiding the menu is ok if last boot was ok or if this is a first boot attempt to boot the entry
+if [ "${boot_success}" = "1" -o "${boot_indeterminate}" = "1" ]; then
+  set menu_hide_ok=1
+else
+  set menu_hide_ok=0 
+fi
+# Reset boot_indeterminate after a successful boot
+if [ "${boot_success}" = "1" ] ; then
+  set boot_indeterminate=0
+# Avoid boot_indeterminate causing the menu to be hidden more then once
+elif [ "${boot_indeterminate}" = "1" ]; then
+  set boot_indeterminate=2
+fi
+# Reset boot_success for current boot 
+set boot_success=0
+save_env boot_success boot_indeterminate
+### END /etc/grub.d/10_reset_boot_success ###
+
+### BEGIN /etc/grub.d/12_menu_auto_hide ###
+if [ x$feature_timeout_style = xy ] ; then
+  if [ "${menu_show_once}" ]; then
+    unset menu_show_once
+    save_env menu_show_once
+    set timeout_style=menu
+    set timeout=60
+  elif [ "${menu_auto_hide}" -a "${menu_hide_ok}" = "1" ]; then
+    set orig_timeout_style=${timeout_style}
+    set orig_timeout=${timeout}
+    if [ "${fastboot}" = "1" ]; then
+      # timeout_style=menu + timeout=0 avoids the countdown code keypress check
+      set timeout_style=menu
+      set timeout=0
+    else
+      set timeout_style=hidden
+      set timeout=1
+    fi
+  fi
+fi
+### END /etc/grub.d/12_menu_auto_hide ###
+
+### BEGIN /etc/grub.d/20_linux_xen ###
+### END /etc/grub.d/20_linux_xen ###
+
+### BEGIN /etc/grub.d/20_ppc_terminfo ###
+### END /etc/grub.d/20_ppc_terminfo ###
+
+### BEGIN /etc/grub.d/30_os-prober ###
+### END /etc/grub.d/30_os-prober ###
+
+### BEGIN /etc/grub.d/30_uefi-firmware ###
+### END /etc/grub.d/30_uefi-firmware ###
+
+### BEGIN /etc/grub.d/40_custom ###
+# This file provides an easy way to add custom menu entries.  Simply type the
+# menu entries you want to add after this comment.  Be careful not to change
+# the 'exec tail' line above.
+### END /etc/grub.d/40_custom ###
+
+### BEGIN /etc/grub.d/41_custom ###
+if [ -f  ${config_directory}/custom.cfg ]; then
+  source ${config_directory}/custom.cfg
+elif [ -z "${config_directory}" -a -f  $prefix/custom.cfg ]; then
+  source $prefix/custom.cfg;
+fi
+### END /etc/grub.d/41_custom ###
+
+ ```
+Проверяем:
+
+
+
+Обновляем атрибуты VG
+
+```shell
+[root@grub ~]# vgchange -ay
+  2 logical volume(s) in volume group "otuslessonroot" now active
+
+ ```
+
+Обновляем initrd:
+```shell
+
+[root@grub ~]# mkinitrd -f -v /boot/initramfs-$(uname -r).img $(uname -r)
+Creating: target|kernel|dracut args|basicmodules 
+dracut: Executing: /usr/bin/dracut -v -f /boot/initramfs-4.18.0-348.7.1.el8_5.x86_64.img 4.18.0-348.7.1.el8_5.x86_64
+dracut: dracut module 'modsign' will not be installed, because command 'keyctl' could not be found!
+dracut: dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut: dracut module 'rngd' will not be installed, because command 'rngd' could not be found!
+dracut: dracut module 'network-legacy' will not be installed, because command 'dhclient' could not be found!
+dracut: dracut module 'btrfs' will not be installed, because command 'btrfs' could not be found!
+dracut: dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut: dracut module 'mdraid' will not be installed, because command 'mdadm' could not be found!
+dracut: dracut module 'cifs' will not be installed, because command 'mount.cifs' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsi-iname' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsiadm' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsid' could not be found!
+dracut: 95nfs: Could not find any command of 'rpcbind portmap'!
+dracut: dracut module 'nvmf' will not be installed, because command 'nvme' could not be found!
+dracut: memstrack is available
+dracut: dracut module 'modsign' will not be installed, because command 'keyctl' could not be found!
+dracut: dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut: dracut module 'rngd' will not be installed, because command 'rngd' could not be found!
+dracut: dracut module 'network-legacy' will not be installed, because command 'dhclient' could not be found!
+dracut: dracut module 'btrfs' will not be installed, because command 'btrfs' could not be found!
+dracut: dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut: dracut module 'mdraid' will not be installed, because command 'mdadm' could not be found!
+dracut: dracut module 'cifs' will not be installed, because command 'mount.cifs' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsi-iname' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsiadm' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsid' could not be found!
+dracut: 95nfs: Could not find any command of 'rpcbind portmap'!
+dracut: dracut module 'nvmf' will not be installed, because command 'nvme' could not be found!
+dracut: *** Including module: bash ***
+dracut: *** Including module: systemd ***
+dracut: *** Including module: systemd-initrd ***
+dracut: *** Including module: i18n ***
+dracut: *** Including module: network-manager ***
+dracut: *** Including module: network ***
+dracut: *** Includi*ng module: ifcfg ***
+dracut: *** Including module: drm ***
+dracut: *** Including module: plymouth ***
+dracut: *** Including module: prefixdevname ***
+dracut: *** Including module: kernel-modules ***
+dracut: *** Including module: kernel-modules-extra ***
+dracut: *** Including module: kernel-network-modules ***
+dracut: *** Including module: rootfs-block ***
+dracut: *** Including module: terminfo ***
+dracut: *** Including module: udev-rules ***
+dracut: Skipping udev rule: 91-permissions.rules
+dracut: Skipping udev rule: 80-drivers-modprobe.rules
+dracut: *** Including module: biosdevname ***
+dracut: *** Including module: dracut-systemd ***
+dracut: *** Including module: haveged ***
+dracut: *** Including module: usrmount ***
+dracut: *** Including module: base ***
+dracut: *** Including module: fs-lib ***
+dracut: *** Including module: memstrack ***
+dracut: *** Including module: shutdown ***
+dracut: *** Including modules done ***
+dracut: *** Installing kernel module dependencies ***
+dracut: *** Installing kernel module dependencies done ***
+dracut: *** Resolving executable dependencies ***
+dracut: *** Resolving executable dependencies done***
+dracut: *** Hardlinking files ***
+dracut: *** Hardlinking files done ***
+dracut: *** Generating early-microcode cpio image ***
+dracut: *** Store current command line parameters ***
+dracut: *** Stripping files ***
+dracut: *** Stripping files done ***
+dracut: *** Creating image file '/boot/initramfs-4.18.0-348.7.1.el8_5.x86_64.img' ***
+dracut: *** Creating initramfs image file '/boot/initramfs-4.18.0-348.7.1.el8_5.x86_64.img' done ***
+
+
+ ```
+Перезагружаемся:
+
+```shell
+[root@grub ~]# reboot
+ ```
+### Проверка
+
+И не получилось, пришлось ручками поправить загрузку и потом искать где еще вхождения имени VG
+```shell
+
+grep -r cl_centos8 /*
+
+sed -i 's/cl_centos8/otuslessonroot/g' /boot/grub2/grubenv
+
+```
+ И после правки в grubenv все заработало
+
+```shell
+[root@grub vagrant]# vgs
+  VG             #PV #LV #SN Attr   VSize    VFree
+  otuslessonroot   1   2   0 wz--n- <127.00g    0 
+[root@grub vagrant]# ^C
+[root@grub vagrant]# lvs
+  LV   VG             Attr       LSize    Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  root otuslessonroot -wi-ao---- <124.94g                                                    
+  swap otuslessonroot -wi-ao----   <2.06g 
+ ```
+
+
+
+### 3. Добавить модуль в initrd
+Переходим в директорию с модулями, создаем новую директорию для своего модуля, в ней создаем файлы модуля:
+
+```shell 
+
+cd /usr/lib/dracut/modules.d/ && mkdir 01logo && cd 01logo
+
+
+cat >> module-setup.sh << EOF
+#!/bin/bash
+
+check() {
+    return 0
+}
+
+depends() {
+    return 0
+}
+
+install() {
+    inst_hook cleanup 00 "\${moddir}/logo.sh"
+}
+EOF
+
+
+cat >> logo.sh <<EOF
+#!/bin/bash
+
+exec 0<>/dev/console 1<>/dev/console 2<>/dev/console
+cat <<'msgend'
+++++++++++++++++++++++++++++++++++
+       .__                                   
+  _____|__| ____   ____  ___________   ____  
+ /  ___/  |/    \_/ ___\/ __ \_  __ \_/ __ \ 
+ \___ \|  |   |  \  \__\  ___/|  | \/\  ___/ 
+/____  >__|___|  /\___  >___  >__|    \___  >
+     \/        \/     \/    \/            \/ 
+
+++++++++++++++++++++++++++++++++++
+msgend
+sleep 10
+echo " continuing...."
+
+EOF
+
+chmod +x module-setup.sh
+chmod +x logo.sh
+
+ ```
+
+
+
+Пересоздаем initrd:
+
+```shell
+
+[root@grub 01logo]# dracut -f -v
+dracut: Executing: /usr/bin/dracut -f -v
+dracut: dracut module 'modsign' will not be installed, because command 'keyctl' could not be found!
+dracut: dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut: dracut module 'rngd' will not be installed, because command 'rngd' could not be found!
+dracut: dracut module 'network-legacy' will not be installed, because command 'dhclient' could not be found!
+dracut: dracut module 'btrfs' will not be installed, because command 'btrfs' could not be found!
+dracut: dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut: dracut module 'mdraid' will not be installed, because command 'mdadm' could not be found!
+dracut: dracut module 'cifs' will not be installed, because command 'mount.cifs' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsi-iname' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsiadm' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsid' could not be found!
+dracut: 95nfs: Could not find any command of 'rpcbind portmap'!
+dracut: dracut module 'nvmf' will not be installed, because command 'nvme' could not be found!
+dracut: memstrack is available
+dracut: dracut module 'modsign' will not be installed, because command 'keyctl' could not be found!
+dracut: dracut module 'busybox' will not be installed, because command 'busybox' could not be found!
+dracut: dracut module 'rngd' will not be installed, because command 'rngd' could not be found!
+dracut: dracut module 'network-legacy' will not be installed, because command 'dhclient' could not be found!
+dracut: dracut module 'btrfs' will not be installed, because command 'btrfs' could not be found!
+dracut: dracut module 'dmraid' will not be installed, because command 'dmraid' could not be found!
+dracut: dracut module 'mdraid' will not be installed, because command 'mdadm' could not be found!
+dracut: dracut module 'cifs' will not be installed, because command 'mount.cifs' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsi-iname' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsiadm' could not be found!
+dracut: dracut module 'iscsi' will not be installed, because command 'iscsid' could not be found!
+dracut: 95nfs: Could not find any command of 'rpcbind portmap'!
+dracut: dracut module 'nvmf' will not be installed, because command 'nvme' could not be found!
+dracut: *** Including module: bash ***
+dracut: *** Including module: systemd ***
+dracut: *** Including module: logo ***
+dracut: *** Including module: systemd-initrd ***
+dracut: *** Including module: i18n ***
+dracut: *** Including module: network-manager ***
+dracut: *** Including module: network ***
+dracut: *** Including module: ifcfg ***
+dracut: *** Including module: drm ***
+dracut: *** Including module: plymouth ***
+dracut: *** Including module: prefixdevname ***
+dracut: *** Including module: dm ***
+dracut: Skipping udev rule: 64-device-mapper.rules
+dracut: Skipping udev rule: 60-persistent-storage-dm.rules
+dracut: Skipping udev rule: 55-dm.rules
+dracut: *** Including module: kernel-modules ***
+dracut: *** Including module: kernel-modules-extra ***
+dracut: *** Including module: kernel-network-modules ***
+dracut: *** Including module: lvm ***
+dracut: Skipping udev rule: 64-device-mapper.rules
+dracut: Skipping udev rule: 56-lvm.rules
+dracut: Skipping udev rule: 60-persistent-storage-lvm.rules
+dracut: *** Including module: resume ***
+dracut: *** Including module: rootfs-block ***
+dracut: *** Including module: terminfo ***
+dracut: *** Including module: udev-rules ***
+dracut: Skipping udev rule: 91-permissions.rules
+dracut: Skipping udev rule: 80-drivers-modprobe.rules
+dracut: *** Including module: biosdevname ***
+dracut: *** Including module: dracut-systemd ***
+dracut: *** Including module: haveged ***
+dracut: *** Including module: usrmount ***
+dracut: *** Including module: base ***
+dracut: *** Including module: fs-lib ***
+dracut: *** Including module: memstrack ***
+dracut: *** Including module: shutdown ***
+dracut: *** Including modules done ***
+dracut: *** Installing kernel module dependencies ***
+dracut: *** Installing kernel module dependencies done ***
+dracut: *** Resolving executable dependencies ***
+dracut: *** Resolving executable dependencies done***
+dracut: *** Hardlinking files ***
+dracut: *** Hardlinking files done ***
+dracut: *** Generating early-microcode cpio image ***
+dracut: *** Store current command line parameters ***
+dracut: *** Stripping files ***
+dracut: *** Stripping files done ***
+dracut: *** Creating image file '/boot/initramfs-4.18.0-348.7.1.el8_5.x86_64.img' ***
+dracut: *** Creating initramfs image file '/boot/initramfs-4.18.0-348.7.1.el8_5.x86_64.img' done ***
+
+
+ ```
+Проверяем:
+
+```
+[root@grub 01logo]# lsinitrd -m /boot/initramfs-$(uname -r).img | grep logo
+logo
+
+ ```
+Отправляем систему в перезагрузку и в процессе наблюдаем результат:
+
+
+https://github.com/sincereman/OTUSLINUX2023-06/blob/master/lesson08/logo.png
+
+ГОТОВО!!! УРА!!!
+
+
+
+
+
+
+
+
+

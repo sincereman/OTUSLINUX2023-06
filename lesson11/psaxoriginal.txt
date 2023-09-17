@@ -1,0 +1,2 @@
+    PID TTY      STAT   TIME COMMAND
+1144268 ?        Sl     0:00 /usr/lib/firefox/firefox -contentproc -childID 97 -isForBrowser -prefsLen 29956 -prefMapSize 234208 -jsInitLen 242416 -parentBuildID 20230805021307 -appDir /usr/lib/firefox/browser {470a145b-d6ef-48c4-8a63-c9f88e12e9ad} 14859 true tab

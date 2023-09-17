@@ -1,0 +1,23 @@
+---
+- name: Register content
+  command: /bin/cat /etc/prometheus/prometheus.yml
+  register: content
+
+- name: Update prometheus.yml
+  lineinfile:
+    insertafter: EOF
+    dest: /etc/prometheus/prometheus.yml
+    line: "  - job_name: 'client1-nodeexporters' \n    static_configs:\n    - targets: [ '192.168.56.11:9100' ]"
+  when: not content is search("'client1-nodeexporters'")
+  notify:
+    -  service restart prometheus
+
+
+- name: Update prometheus.yml
+  lineinfile:
+    insertafter: EOF
+    dest: /etc/prometheus/prometheus.yml
+    line: "  - job_name: 'client2-nodeexporters' \n    static_configs:\n    - targets: [ '192.168.56.12:9100' ]"
+  when: not content is search("'client2-nodeexporters'")
+  notify:
+    -  service restart prometheus

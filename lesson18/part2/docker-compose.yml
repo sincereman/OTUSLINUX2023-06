@@ -1,0 +1,8 @@
+    version: "3"
+    
+    services:
+      nginx_node:
+        image: image_custom_nginx_node
+        build: nginx_custom/
+        ports:
+          - "8080:8080"

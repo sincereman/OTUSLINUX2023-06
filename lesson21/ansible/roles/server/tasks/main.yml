@@ -1,0 +1,253 @@
+---
+
+## Grafana
+
+- name: Set time zone # \cp /usr/share/zoneinfo/Europe/Moscow /etc/localtime
+  copy:
+    src: /usr/share/zoneinfo/Europe/Moscow
+    dest: /etc/localtime
+  tags:
+    - prometeus-server-configure
+    - set-tz
+    - grafana-install
+
+#- name: Update Repo url from updatereposcript.sh
+#  script: ../files/etc/updatereposcript.sh
+#  tags:
+#    - prometeus-server-configure
+#    - update-repo-url
+#    - grafana-install
+
+
+- name: Update Repo url
+  shell: "{{item}}"
+  with_items: 
+    - sudo sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*.repo
+    - sudo sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo
+  tags:
+    - grafana-install
+    - prometeus-server-configure
+    - update-repo-url
+
+- name: Synchronize datetime | Install chrony
+  yum:
+    name: chrony
+    state: latest
+  tags:
+    - prometeus-server-configure
+    - configure-datetime
+    - grafana-install
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - prometeus-server-configure
+    - configure-datetime
+    - grafana-install
+
+ ## Prometheus Server   
+
+- name: Create prometheus user
+  ansible.builtin.user:
+    name: prometheus
+    shell: /bin/false
+    createhome: no
+  tags:
+    - prometeus-server-configure
+    - create-user
+
+# You can use shell to run other executables to perform actions inline
+- name: Create new folders, set specific permission 
+  shell: | # TODO: vars
+    mkdir /etc/prometheus
+    mkdir /var/lib/prometheus
+    chown prometheus:prometheus /etc/prometheus
+    chown prometheus:prometheus /var/lib/prometheus
+    exit 0
+  tags:
+    - prometeus-server-configure
+    - create-work-paths
+
+
+- name: Copy ./prometheus to /usr/local/bin
+  copy:
+    src: ../files/prometheus-latest-linux-amd64/prometheus
+    dest: /usr/local/bin
+    owner: prometheus
+    group: prometheus
+    mode: u=rx,g=-rwx,o=-rwx
+  tags:
+    - prometeus-server-configure
+    - copy-to-bin
+
+- name: Copy ./promtool to /usr/local/bin
+  copy:
+    src: ../files/prometheus-latest-linux-amd64/promtool
+    dest: /usr/local/bin
+    owner: prometheus
+    group: prometheus
+    mode: u=rx,g=-rwx,o=-rwx
+  tags:
+    - prometeus-server-configure
+    - copy-to-bin
+
+- name: Configure prometeus application | prometheus.yml
+  ansible.builtin.copy:
+    src: ../files/etc/prometheus/prometheus.yml
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    mode: u=r,g=r,o=r
+  tags:
+    - prometeus-server-configure
+    - prometeus-app-configure
+
+- name: Configure prometeus application | consoles
+  ansible.builtin.copy:
+    src: ../files/prometheus-latest-linux-amd64/consoles
+    dest: /etc/prometheus/
+    owner: prometheus
+    group: prometheus
+    mode: u=rx,g=rx,o=r
+  tags:
+    - prometeus-server-configure
+    - prometeus-app-configure
+    - prometeus-app-configure-consoles
+
+- name: Configure prometeus application | console libraries
+  ansible.builtin.copy:
+    src: ../files/prometheus-latest-linux-amd64/console_libraries
+    dest: /etc/prometheus/
+    owner: prometheus
+    group: prometheus
+    mode: u=rx,g=rx,o=r
+  tags:
+    - prometeus-server-configure
+    - prometeus-app-configure
+    - prometeus-app-configure-console-libraries
+
+- name: Configure prometeus application | consoles
+  ansible.builtin.copy:
+    src: ../files/dashboard/overview.html
+    dest: /etc/prometheus/consoles/overview.html
+    owner: prometheus
+    group: prometheus
+    mode: u=rx,g=rx,o=r
+  tags:
+    - prometeus-server-configure
+    - prometeus-app-configure
+    - prometeus-app-configure-consoles
+    - prometeus-app-configure-consoles-mine
+
+- name: Configure prometeus service
+  ansible.builtin.copy:
+    src: ../files/etc/systemd/system/prometheus.service
+    dest: /etc/systemd/system/prometheus.service
+    mode: u=r,g=-rwx,o-rwx
+  notify:
+    - service restart prometheus
+    - systemctl daemon reload
+  tags:
+    - prometeus-server-configure
+    - prometeus-app-configure
+    - prometeus-service-configure
+
+- name: Turn on prometeus service
+  service:
+    name: prometheus.service
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - prometeus-server-configure
+    - prometeus-service-turn-on
+
+- name: Check http
+  uri:
+    url: "http://localhost:9090"  # refactoring: в переменные
+    return_content: no
+  register: http_response
+  tags:
+    - prometeus-server-configure
+    - test-prometeus-http
+
+- name: Check http
+  fail:
+    msg: 'Http response detected as fail: {{http_response}}'
+  when: http_response.status != 200
+  tags:
+    - prometeus-server-configure
+    - test-prometeus-http
+
+
+## Grafana
+
+- name: Create repo Grafana
+  template:
+    src: ../files/etc/grafana/grafana.repo
+    dest: /etc/yum.repos.d/grafana.repo
+  tags:
+    - grafana-server-configure
+    - grafana-repo
+    - grafana-install
+
+- name: Install Grafana
+  yum:
+    name: grafana
+    state: latest
+  notify:
+    - service restart grafana-server 
+    - systemctl daemon reload
+  tags:
+    - yum-grafana
+    - grafana-install
+
+- name: Install fontconfig
+  yum:
+    name: fontconfig
+    state: latest
+  notify:
+    - service restart grafana-server 
+    - systemctl daemon reload
+  tags:
+    - yum-fontconfig
+    - grafana-install
+
+- name: Install freetype*
+  yum:
+    name: freetype*
+    state: latest
+  notify:
+    - service restart grafana-server 
+    - systemctl daemon reload
+  tags:
+    - yum-freetype*
+    - grafana-install
+
+- name: Install urw-fonts
+  yum:
+    name: urw-fonts
+    state: latest
+  notify:
+    - service restart grafana-server 
+    - systemctl daemon reload
+  tags:
+    - yum-urw-fonts
+    - grafana-install
+
+- name: Starts Grafana
+  command: "{{item}}"
+  with_items: 
+    - systemctl daemon-reload 
+    - systemctl start grafana-server 
+    - systemctl enable grafana-server.service 
+    - systemctl status grafana-server
+  tags:
+    - grafana-service-install
+    - grafana-install

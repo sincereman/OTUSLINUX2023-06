@@ -1,0 +1,15 @@
+# -*- mode: ruby -*- 
+# vi: set ft=ruby : vsa
+Vagrant.configure(2) do |config| 
+  config.vm.box = "generic/centos8"
+  config.vm.box_version = "4.2.16"
+  config.vm.provider "virtualbox" do |v| 
+      v.memory = 1024 
+      v.cpus = 2
+  end 
+  config.vm.define "bash" do |bash| 
+    bash.vm.network "private_network", ip: "192.168.56.10",  virtualbox__intnet: "net1" 
+    bash.vm.hostname = "bash"
+    bash.vm.provision "shell", path: "bash.sh"
+  end 
+end

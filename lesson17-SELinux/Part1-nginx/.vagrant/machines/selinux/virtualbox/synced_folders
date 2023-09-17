@@ -1,0 +1,1 @@
+{"rsync":{"/vagrant":{"type":"rsync","guestpath":"/vagrant","hostpath":"/home/sincere/vagrantdocs/lesson17-SELinux/Part1-nginx","disabled":false,"__vagrantfile":true,"owner":"vagrant","group":"vagrant"}}}

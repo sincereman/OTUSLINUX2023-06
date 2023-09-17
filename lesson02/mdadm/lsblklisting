@@ -1,0 +1,54 @@
+ДО
+
+
+    otuslinuxlesson02: NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+    otuslinuxlesson02: sda      8:0    0   40G  0 disk
+    otuslinuxlesson02: └─sda1   8:1    0   40G  0 part /
+    otuslinuxlesson02: sdb      8:16   0  100M  0 disk
+    otuslinuxlesson02: sdc      8:32   0  100M  0 disk
+    otuslinuxlesson02: sdd      8:48   0  100M  0 disk
+    otuslinuxlesson02: sde      8:64   0  100M  0 disk
+    otuslinuxlesson02: sdf      8:80   0  100M  0 disk
+
+
+ПОСЛЕ
+
+
+    otuslinuxlesson02: NAME      MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINT
+    otuslinuxlesson02: sda         8:0    0   40G  0 disk
+    otuslinuxlesson02: └─sda1      8:1    0   40G  0 part  /
+    otuslinuxlesson02: sdb         8:16   0  100M  0 disk
+    otuslinuxlesson02: └─md0       9:0    0  392M  0 raid5
+    otuslinuxlesson02:   ├─md0p1 259:0    0   76M  0 md    /raid/part1
+    otuslinuxlesson02:   ├─md0p2 259:1    0   78M  0 md    /raid/part2
+    otuslinuxlesson02:   ├─md0p3 259:2    0   80M  0 md    /raid/part3
+    otuslinuxlesson02:   ├─md0p4 259:3    0   78M  0 md    /raid/part4
+    otuslinuxlesson02:   └─md0p5 259:4    0   78M  0 md    /raid/part5
+    otuslinuxlesson02: sdc         8:32   0  100M  0 disk
+    otuslinuxlesson02: └─md0       9:0    0  392M  0 raid5
+    otuslinuxlesson02:   ├─md0p1 259:0    0   76M  0 md    /raid/part1
+    otuslinuxlesson02:   ├─md0p2 259:1    0   78M  0 md    /raid/part2
+    otuslinuxlesson02:   ├─md0p3 259:2    0   80M  0 md    /raid/part3
+    otuslinuxlesson02:   ├─md0p4 259:3    0   78M  0 md    /raid/part4
+    otuslinuxlesson02:   └─md0p5 259:4    0   78M  0 md    /raid/part5
+    otuslinuxlesson02: sdd         8:48   0  100M  0 disk
+    otuslinuxlesson02: └─md0       9:0    0  392M  0 raid5
+    otuslinuxlesson02:   ├─md0p1 259:0    0   76M  0 md    /raid/part1
+    otuslinuxlesson02:   ├─md0p2 259:1    0   78M  0 md    /raid/part2
+    otuslinuxlesson02:   ├─md0p3 259:2    0   80M  0 md    /raid/part3
+    otuslinuxlesson02:   ├─md0p4 259:3    0   78M  0 md    /raid/part4
+    otuslinuxlesson02:   └─md0p5 259:4    0   78M  0 md    /raid/part5
+    otuslinuxlesson02: sde         8:64   0  100M  0 disk
+    otuslinuxlesson02: └─md0       9:0    0  392M  0 raid5
+    otuslinuxlesson02:   ├─md0p1 259:0    0   76M  0 md    /raid/part1
+    otuslinuxlesson02:   ├─md0p2 259:1    0   78M  0 md    /raid/part2
+    otuslinuxlesson02:   ├─md0p3 259:2    0   80M  0 md    /raid/part3
+    otuslinuxlesson02:   ├─md0p4 259:3    0   78M  0 md    /raid/part4
+    otuslinuxlesson02:   └─md0p5 259:4    0   78M  0 md    /raid/part5
+    otuslinuxlesson02: sdf         8:80   0  100M  0 disk
+    otuslinuxlesson02: └─md0       9:0    0  392M  0 raid5
+    otuslinuxlesson02:   ├─md0p1 259:0    0   76M  0 md    /raid/part1
+    otuslinuxlesson02:   ├─md0p2 259:1    0   78M  0 md    /raid/part2
+    otuslinuxlesson02:   ├─md0p3 259:2    0   80M  0 md    /raid/part3
+    otuslinuxlesson02:   ├─md0p4 259:3    0   78M  0 md    /raid/part4
+    otuslinuxlesson02:   └─md0p5 259:4    0   78M  0 md    /raid/part5
