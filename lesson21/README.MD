@@ -369,7 +369,7 @@ server-prometheus | SUCCESS => {
 Сознательно разделил vagrant и запуск провижнинга, так как в таком объеме собирал первый раз и требовалось много времени для отладки
 
 
-<details><summary>Ход выполнения скрипта</summary></details>
+<details><summary>Ход выполнения скрипта</summary>
 
 
 ```shell
