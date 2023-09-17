@@ -89,6 +89,7 @@ end
 <details> 
 <summary> Процесс создания VM</summary>
 
+```shell
 sincere@sincere-ubuntuotus:~/vagrantdocs/lesson21/vm$ vagrant up
 Bringing machine 'server' up with 'virtualbox' provider...
 Bringing machine 'client1-nodeexporters' up with 'virtualbox' provider...
@@ -207,7 +208,7 @@ Bringing machine 'client2-nodeexporters' up with 'virtualbox' provider...
 ==> client2-nodeexporters: Rsyncing folder: /home/sincere/vagrantdocs/lesson21/vm/ => /vagrant
 ==> client2-nodeexporters: Running provisioner: shell...
     client2-nodeexporters: Running: inline script
-
+```
 </details>
 
 
@@ -370,6 +371,8 @@ server-prometheus | SUCCESS => {
 
 <details><summary>Ход выполнения скрипта</summary></details>
 
+
+```shell
 prometheus-2.47.0.linux-amd64/
 prometheus-2.47.0.linux-amd64/console_libraries/
 prometheus-2.47.0.linux-amd64/console_libraries/menu.lib
@@ -700,7 +703,7 @@ changed: [server-prometheus]
 PLAY RECAP **********************************************************************************************************************************************************************
 server-prometheus          : ok=5    changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 
-
+```
 
 </details>
 
