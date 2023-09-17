@@ -251,3 +251,20 @@
   tags:
     - grafana-service-install
     - grafana-install
+
+- name: Check http grafana
+  uri:
+    url: "http://localhost:3000"  # refactoring: в переменные
+    return_content: no
+  register: http_response_grafana
+  tags:
+    - grafana-service-install
+    - test-grafana-http
+
+- name: Check http grafana
+  fail:
+    msg: 'Http response detected as fail: {{http_response_grafana}}'
+  when: http_response_grafana.status != 200
+  tags:
+    - grafana-service-install
+    - test-grafana-http
