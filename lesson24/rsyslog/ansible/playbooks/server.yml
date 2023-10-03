@@ -1,0 +1,6 @@
+---
+- name: Playbook of server initialization
+  hosts: rsyslog_server
+  become: true
+  roles:
+    - role: '../roles/server'

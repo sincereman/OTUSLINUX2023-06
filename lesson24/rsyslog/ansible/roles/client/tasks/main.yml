@@ -1,0 +1,279 @@
+---
+
+## Base configure
+
+- name: Set time zone # \cp /usr/share/zoneinfo/Europe/Moscow /etc/localtime
+  copy:
+    src: /usr/share/zoneinfo/Europe/Moscow
+    dest: /etc/localtime
+  tags:
+    - rsyslog-client-configure
+    - rsyslog-configure
+    - set-tz
+    - elk-configure
+
+
+- name: Update Repo url
+  shell: "{{item}}"
+  with_items: 
+    - sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*.repo
+    - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo
+  tags:
+    - rsyslog-client-configure
+    - rsyslog-configure
+    - update-base-repo
+    - elk-configure
+
+
+- name: Synchronize datetime | Install chrony
+  yum:
+    name: chrony
+    state: latest
+  tags:
+    - rsyslog-client-configure
+    - rsyslog-configure
+    - configure-datetime
+    - elk-configure
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - rsyslog-client-configure
+    - rsyslog-configure
+    - configure-datetime
+    - elk-configure
+
+ ## Rsyslog Client
+
+- name: Install the latest version of Rsyslog
+  ansible.builtin.yum:
+    name: rsyslog
+    state: latest
+  tags:
+    - rsyslog-yum-install
+    - rsyslog-client-configure
+
+- name: Remove file /etc/rsyslog.d/
+  file:
+    state: "{{ item }}"
+    path: "/etc/rsyslog.d/"
+    owner: root
+    group: root
+    mode: '0755'
+  with_items:
+    - absent
+    - directory
+  tags:
+    - rsyslog-rules-configure
+    - clear-etc-rsyslogd
+
+- name: Remove file /var/log/rsyslog/
+  file:
+    state: "{{ item }}"
+    path: "/var/log/rsyslog/"
+    owner: root
+    group: root
+    mode: '0755'
+  with_items:
+    - absent
+    - directory
+  tags:
+    - testdelete
+    - rsyslog-rules-configure
+    - clear-etc-rsyslogd
+
+
+# - name: Rsyslog-server cleaning /etc/rsyslog.d/ and /var/log/rsyslog/
+#   shell: "{{item}}"
+#   with_items: 
+#     - rm -rf /etc/rsyslog.d/*
+#     - rm -rf /var/log/rsyslog/*
+#   tags:
+#     - rsyslog-rules-configure
+#     - clear-etc-rsyslogd
+
+- name: Copy ./rsyslog.conf to /etc/rsyslog.conf
+  copy:
+    src: ../files/etc/rsyslog/rsyslog.conf
+    dest: /etc/rsyslog.conf
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+  notify:
+    - systemctl daemon reload
+    - service restart rsyslog
+  tags:
+    - rsyslfilesog-client-configure
+    - copy-rsyslog-conf
+
+# - name: Copy ./rsyslogtemplate to /etc/rsyslog.d/*
+#   copy:
+#     src: ../files/etc/rsyslog/template/
+#     dest: /etc/rsyslog.d
+#     owner: root
+#     group: root
+#     mode: u=rw,g=r,o=r
+#   notify:
+#     - systemctl daemon reload
+#     - service restart rsyslog
+#   tags:
+#     - rsyslog-client-configure
+#     - copy-rsyslog-template
+
+- name: Rsyslog simple template
+  template:
+    src: ../files/etc/rsyslog/template/all_logs.conf
+    dest: /etc/rsyslog.d/all_logs.conf
+  notify:
+    - systemctl daemon reload
+    - service restart rsyslog
+  tags:
+    - rsyslog-client-configure
+    - copy-rsyslog-template-alllogs
+
+- name: Restart service rsyslog, in all cases
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+
+
+# Configure NGINX
+
+- name: Install EPEL-repository
+  yum:
+    name: epel-release
+    state: present
+  tags:
+    - deploy-nginx
+    - add-epel-repository
+
+- name: Nginx | Install Nginx package from EPEL-repository
+  yum:
+    name: nginx
+    state: latest
+  notify:
+    - enable nginx
+    - service restart nginx
+  tags:
+    - deploy-nginx
+    - install-nginx
+
+- name: Nginx | Configure Nginx with remote access logging
+  template:
+    src: ../files/etc/nginx/nginx.conf
+    dest: /etc/nginx/nginx.conf
+  notify:
+    - systemctl daemon reload
+    - service restart rsyslog
+    - enable nginx
+    - service restart nginx
+  tags:
+    - deploy-nginx
+    - configure-nginx
+
+
+  # Configure Audit
+
+
+- name: Add line to audit rules about nginx.conf
+  ansible.builtin.lineinfile:
+    path: /etc/audit/rules.d/audit.rules
+    state: present
+    regexp: '^-w /etc/nginx/nginx.conf -p wa -k nginx_conf'
+    line: '-w /etc/nginx/nginx.conf -p wa -k nginx_conf'
+  tags:
+    - audit-configure
+    - configure-nginx
+
+- name: Add line to audit rules about default.d
+  ansible.builtin.lineinfile:
+    path: /etc/audit/rules.d/audit.rules
+    state: present
+    regexp: '^-w /etc/nginx/default.d/ -p wa -k nginx_conf'
+    line: '-w /etc/nginx/default.d/ -p wa -k nginx_conf'
+  notify:
+    - service auditd restart
+  tags:
+    - audit-configure
+    - configure-nginx
+
+
+- name: Install audispd-plugins
+  yum:
+    name: audispd-plugins
+    state: latest
+  tags:
+    - audit-configure
+
+
+- name: Add line logformat to auditd.conf
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    state: present
+    regexp: "log_format ="
+    line: "log_format = RAW"
+  notify:
+    - service restart auditd
+  tags:
+    - audit-configure
+    - configure-nginx
+
+- name: Add line hosts to auditd.conf
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    state: present
+    regexp: "name_format = "
+    line: "name_format = hostname"
+#    line: "name_format = {{ ansible_facts['nodename'] }}"
+  notify:
+    - service restart auditd
+  tags:
+    - audit-configure
+    - configure-nginx
+
+- name: Add line tcplisten to auditd.conf
+  ansible.builtin.lineinfile:
+    path: /etc/audit/auditd.conf
+    state: present
+    regexp: "##tcp_listen_port = 60"
+    line: "tcp_listen_port = 60"
+  notify:
+    - service restart auditd
+  tags:
+    - audit-configure
+    - configure-nginx
+
+- name: Add line change active to /etc/audit/plugins.d/au-remote.conf
+  ansible.builtin.lineinfile:
+    path: /etc/audit/plugins.d/au-remote.conf
+    state: present
+    regexp: "active = no"
+    line: "active = yes"
+  notify:
+    - service restart auditd
+  tags:
+    - audit-configure
+    - configure-nginx
+
+- name: Add line remoteserver to auditd.conf
+  ansible.builtin.lineinfile:
+    path: /etc/audit/audisp-remote.conf 
+    state: present
+    regexp: "remote_server = "
+    line: "remote_server = {{ rsyslog_server }}"
+  notify:
+    - service restart auditd
+  tags:
+    - audit-configure
+    - configure-nginx
+
+
+
+
+
+   

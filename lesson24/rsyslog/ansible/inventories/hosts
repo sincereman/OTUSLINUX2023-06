@@ -1,0 +1,11 @@
+[rsyslog_server]
+rsyslog-server ansible_host=192.168.56.20 ansible_port=22 ansible_user=vagrant ansible_private_key_file=../vm/.vagrant/machines/rsyslog-server/virtualbox/private_key
+
+[rsyslog_client]
+rsyslog-client1 ansible_host=192.168.56.21 ansible_private_key_file=../vm/.vagrant/machines/rsyslog-client1/virtualbox/private_key
+rsyslog-client2 ansible_host=192.168.56.22 ansible_private_key_file=../vm/.vagrant/machines/rsyslog-client2/virtualbox/private_key
+
+[rsyslog_client:vars]
+ansible_user=vagrant
+ansible_port=22
+#ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson21/vm/.vagrant/machines/server/virtualbox/private_key
