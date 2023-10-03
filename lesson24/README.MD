@@ -217,6 +217,8 @@ Bringing machine 'rsyslog-client2' up with 'virtualbox' provider...
     rsyslog-client2: Running: inline script
 
 ```
+</details>
+
 
 Подготовка каталогов
 
@@ -434,6 +436,7 @@ rsyslog-client1            : ok=18   changed=14   unreachable=0    failed=0    s
 rsyslog-client2            : ok=18   changed=14   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 
 ```
+
 
 Проверка
 
