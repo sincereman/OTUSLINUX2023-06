@@ -741,6 +741,7 @@ ok: [rsyslog-client1]
 PLAY RECAP ********************************************************************************************************************************************************************************************************
 rsyslog-client1            : ok=9    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 rsyslog-client2            : ok=9    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
 
 </details>
 
@@ -840,12 +841,14 @@ format = string
 
 ```
 
-Повторить весь процесс git clone repository
-cd vm
-vagrant up
-cd ../ansible
-ansible-playbook playbooks/server.yml
-ansible-playbook playbooks/client.yml
+## Повторить весь процесс git clone repository
+
+`cd vm`
+`vagrant up`
+`cd ../ansible`
+`ansible-playbook playbooks/server.yml`
+`ansible-playbook playbooks/client.yml`
+
 
 
 Задание выполнено.
