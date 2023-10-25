@@ -1,0 +1,4 @@
+Download http://nl.mirrors.clouvider.net/CentOS/8-stream/isos/x86_64/CentOS-Stream-8-20231016.0-x86_64-boot.iso
+Download full package http://nl.mirrors.clouvider.net/CentOS/8-stream/isos/x86_64/CentOS-Stream-8-20231023.2-x86_64-dvd1.iso
+
+Лежит в каталоге отдельном чтобы github  не испортить

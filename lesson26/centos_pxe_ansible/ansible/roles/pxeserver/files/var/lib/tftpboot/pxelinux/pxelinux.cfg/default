@@ -1,0 +1,32 @@
+default vesamenu.c32
+prompt 1
+timeout 600
+
+display boot.msg
+
+MENU TITLE PXE setup over HTTP
+
+LABEL linux
+  menu label ^Install system
+  menu default
+  kernel images/CentOS-8/vmlinuz
+  append initrd=images/CentOS-8/initrd.img ui ip=dhcp inst.repo=http://10.0.0.20/centos8-install
+LABEL linux-auto  
+  menu label ^Auto install system
+  kernel images/CentOS-8/vmlinuz
+  append initrd=images/CentOS-8/initrd.img ip=dhcp inst.ks=http://10.0.0.20/cfg/ks.cfg inst.repo=http://10.0.0.20/centos8-install
+LABEL vesa
+  menu label Install system with ^basic video driver
+  kernel images/CentOS-8/vmlinuz
+  append initrd=images/CentOS-8/initrd.img ip=dhcp inst.xdriver=vesa nomodeset
+LABEL rescue
+  menu label ^Rescue installed system
+  kernel images/CentOS-8/vmlinuz
+  append initrd=images/CentOS-8/initrd.img rescue
+LABEL nfs
+  menu label ^Auto install system NFS
+  kernel images/CentOS-8/vmlinuz
+  append initrd=images/CentOS-8/initrd.img ip=dhcp inst.ks=http://10.0.0.20/cfg/ks.cfg inst.repo=nfs:10.0.0.20:/usr/share/nginx/html/centos8-install
+LABEL local
+  menu label Boot from ^local drive
+  localboot 0xffff

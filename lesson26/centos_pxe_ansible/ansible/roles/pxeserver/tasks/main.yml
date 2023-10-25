@@ -1,0 +1,250 @@
+---
+
+# add EPEL Repository
+
+- name: Install EPEL Repo package from standart repo
+  yum:
+    name: epel-release
+    state: present
+  tags:
+    - repo
+    - pxeserver
+
+# Install DHCP Server
+ 
+- name: Install DHCP-server
+  yum:
+    name: dhcp-server
+    state: present
+  tags:
+    - dhcp
+    - pxeserver
+
+- name: Install tftp-server
+  yum:
+    name: tftp-server
+    state: present
+  tags:
+    - tftp
+    - pxeserver
+
+# for troubleshhoting
+
+- name: Install tftp
+  yum:
+    name: tftp
+    state: present
+  tags:
+    - tftp
+    - tftpclient
+
+
+- name: Install nginx
+  yum:
+    name: nginx
+    state: present
+  tags:
+    - nginx
+    - pxeserver
+
+- name: Configure nginx
+  template:
+    src: ../files/etc/nginx/nginx.conf
+    dest: /etc/nginx/nginx.conf
+  notify:
+    - start nginx
+  tags:
+    - nginx
+    - pxeserver
+
+
+- name: Firewall
+  service:
+    name: firewalld
+    enabled: no
+    state: stopped
+  notify:
+    - systemctl daemon reload
+  tags:
+    - firewall-cmd-off
+    - pxeserver
+
+- name: SELinix configure
+  shell: |
+    setenforce 0
+    exit 0
+  ignore_errors: false
+  tags:
+    - selinuxoff
+    - pxeserver
+
+- name: Set /etc/dhcp/dhcpd.conf
+  copy:
+    src: ../files/etc/dhcp/dhcpd.conf
+    dest: /etc/dhcp/dhcpd.conf
+  notify:
+    - systemctl-restart-dhcpd
+  tags:
+    - dhcp
+    - dhcpdconf
+    - pxeserver
+
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ pxelinux_images_dir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - pxeserverconfig
+    - pxeserver
+
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ pxelinux_cfg_dir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - pxeserverconfig
+    - pxeserver
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ ks_cfg_dir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - pxeserverconfig
+    - pxeserver
+
+#тут остановился - поправить переменные
+
+- name: Copy files from syslinux-tftpboot-6.04-4.el8.noarch.rpm
+  copy:
+    src: ../files/var/lib/tftpboot/pxelinux/{{ item }}
+    dest: "{{ pxelinux_dir }}/{{ item }}"
+  loop:
+    - ldlinux.c32
+    - libcom32.c32
+    - libmenu.c32
+    - libutil.c32
+    - menu.c32
+    - pxelinux.0
+    - vesamenu.c32
+  tags:
+    - pxepxelinuxfiles
+    - pxeserver
+
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ pxelinux_cfg_dir }}"
+    state: directory
+    mode: '0755'
+  tags:
+    - pxelinuxcfg
+    - pxeserver
+
+- name: Create  pxelinux.cfg dir and copy default
+  copy:
+    src: ../files/var/lib/tftpboot/pxelinux/pxelinux.cfg/default
+    dest: "{{ pxelinux_cfg_dir }}/default"
+  tags:
+    - pxelinuxcfg
+    - pxeserver
+
+
+- name: Copy initrd.img and vmlinuz
+  copy:
+    src: ../files/iso/{{ item }}
+    dest: "{{ pxelinux_images_dir }}/{{ item }}"
+  loop:
+    - initrd.img
+    - vmlinuz
+  tags:
+    - pxepxelinuxcorefiles
+    - pxeserver
+
+
+- name: Copy ISO
+  copy:
+    src: ../../../../../../../iso/{{ item }}
+    dest: "{{ pxelinux_images_dir }}/{{ item }}"
+  loop:
+    - CentOS-Stream-8-20231023.2-x86_64-dvd1.iso
+  tags:
+    - pxepxelinuxisofiles
+    - pxeserver
+
+
+
+- name: Mount `CentOS-Stream-8-20231023.2-x86_64-dvd1.iso`
+  shell: |
+    mkdir -p '{{ mnt_dir }}'/centos8-install
+    mount -t iso9660 {{ pxelinux_images_dir }}/CentOS-Stream-8-20231023.2-x86_64-dvd1.iso {{ mnt_dir }}/centos8-install
+    echo '{{ public_exports_dir }}/centos8-install *(ro)' > {{ exports_dir }}/exports
+    exit 0
+  ignore_errors: false
+  notify:
+    - restart nginx
+    - systemctl-restart-dhcpd
+  tags:
+    - pxepxelinuxmountisofiles
+    - pxeserver
+
+
+- name: Copy ks.cfg
+  copy:
+    src: ../files/home/vagrant/cfg/ks.cfg
+    dest: "{{ ks_cfg_dir }}/ks.cfg"
+  tags:
+    - pxeunattendedksfiles
+    - pxeserver
+
+- name: tftpserver-path change to nginx.
+  lineinfile: 
+    path: /usr/lib/systemd/system/tftp.service
+    regexp: '^(.*)ExecStart=/usr/sbin/in.tftpd -s (.*)$' 
+    line: 'ExecStart=/usr/sbin/in.tftpd -s /usr/share/nginx/html'
+    backrefs: yes
+  notify:
+    - systemctl daemon reload
+    - restart tftp
+  tags:
+    - pxetftp
+    - tftpserver
+    - changeservicetftppath
+
+- name: restart tftp-server
+  service:
+    name: tftp.service
+    state: restarted
+    enabled: true
+  tags:
+    - pxetftp
+    - tftpserver
+
+- name: Configure NFS Place for ISO
+  shell: |
+    echo '/usr/share/nginx/html/centos8-install *(ro)' >> /etc/exports
+    exportfs -r
+    exportfs -a
+    exportfs -s
+    exit 0
+  notify:
+    - systemctl daemon reload
+    - systemctl-restart-nfs-server
+  tags:
+    - pxenfs
+    - nfsserver
+
+
+- name: restart nfs-server
+  service:
+    name: nfs-server.service 
+    state: restarted
+    enabled: true
+  tags:
+    - pxenfs
+    - nfsserver
