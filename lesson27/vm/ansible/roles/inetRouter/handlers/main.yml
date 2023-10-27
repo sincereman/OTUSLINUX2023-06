@@ -1,0 +1,16 @@
+---
+- name: Apply and reload the new config address with netplan
+  command: netplanapply
+  become: true
+  async: 100
+  poll: 0
+
+- name: systemctl daemon reload
+  systemd:
+    daemon_reload: yes
+
+- name: startiptables
+  systemd:
+    name: iptables
+    enabled: yes
+    state: started

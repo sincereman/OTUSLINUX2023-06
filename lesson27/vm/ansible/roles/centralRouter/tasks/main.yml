@@ -1,0 +1,71 @@
+---
+#install netplan
+
+- name: Install netplan
+  apt:
+    name: "netplan.io"
+    state: present
+    update_cache: yes
+  become: true
+  tags:
+    - netplaninstall
+    - inetRouter
+
+#install mtr utility
+- name: Install MTR for Troubleshootings
+  apt:
+    name: mtr
+    state: present
+  tags:
+    - mtr
+    - inetrouter
+
+#disable ufw firewall
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+    - inetrouter
+
+#enable forwarding for interfaces
+- name: set up forward packages across routers
+  sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    state: present
+  notify:
+    - systemctl daemon reload
+
+
+#disable default route
+- name: disable default route
+  template: 
+    src: files/00-installer-config.yaml
+    dest: /etc/netplan/00-installer-config.yaml
+    owner: root
+    group: root
+    mode: 0644
+
+
+
+# Add routing and ip addresses
+
+- name: add default gateway for Routers
+  template: 
+    src: "files/netplan_{{ansible_hostname}}.yaml"
+    dest: /etc/netplan/50-vagrant.yaml
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Apply and reload the new config address with netplan
+  command: netplan apply
+  become: true
+  async: 100
+  poll: 0
+
+

@@ -1,0 +1,7 @@
+---
+- name: Playbook of "InetRouter"
+  hosts:
+    - inetRouter
+  become: true
+  roles:
+    - role: '../roles/inetRouter'
