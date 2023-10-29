@@ -36,16 +36,16 @@ Prerequistes
 
 ```shell
 
-sincere@sincere-ubuntuotus:~/vagrantdocs/lesson25-Backup/vm/ansible/rsa-key$ ssh-keygen -t ed25519 -f ./backup_borg
-Generating public/private ed25519 key pair.
+sincere@sincere-ubuntuotus:~/vagrantdocs/lesson25-Backup/vm/ansible/rsa-key$ ssh-keygen -t rsa -f ./rsa-key
+Generating public/private rsa key pair.
 Enter passphrase (empty for no passphrase): 
 Enter same passphrase again: 
-Your identification has been saved in ./backup_borg
-Your public key has been saved in ./backup_borg.pub
+Your identification has been saved in ./id_rsa
+Your public key has been saved in ./id_rsa.pub
 The key fingerprint is:
 SHA256:aVRLDHFaaIytVhGpJPqulXnjAB2jCH47IxJ5BlMfDo4 sincere@sincere-ubuntuotus
 The key's randomart image is:
-+--[ED25519 256]--+
++--[RSA 256]--+
 |  o .  +=O=      |
 | + +..o B*..     |
 |E ..=o =o .      |
