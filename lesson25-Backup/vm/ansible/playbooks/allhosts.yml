@@ -1,0 +1,25 @@
+---
+
+#dataserver
+
+- name: Playbook of "dataserver"
+  hosts:
+    - dataserver
+  become: true
+  roles:
+    - role: '../roles/dataserver'
+
+#backupserver
+
+- name: Playbook of "backupserver"
+  hosts:
+    - backupserver
+  become: true
+  roles:
+    - role: '../roles/backupserver'
+
+
+
+
+
+

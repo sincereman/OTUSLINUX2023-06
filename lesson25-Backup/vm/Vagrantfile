@@ -1,0 +1,52 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+MACHINES = {
+  :dataserver => {
+        :box_name => "debian/bullseye64",
+        :vm_name => "dataserver",
+        :net => [
+                   [ "192.168.11.150",  2,  "255.255.255.0",  "backup-net"],
+                   #подсеть 192.168.56.0/24 - для связи с vagrant
+                   [ "192.168.56.10", 8, "255.255.255.0",    "mgmt"],
+                ]
+  },
+  :backupserver => {
+        :box_name => "debian/bullseye64",
+        :vm_name => "backupserver",
+        :net => [
+                   [ "192.168.11.160",  2,  "255.255.255.0",  "backup-net"],
+                   [ "192.168.56.11",  8, "255.255.255.0",    "mgmt"],
+                ]
+  },
+   
+}
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+
+    config.vm.define boxname do |box|
+   
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxconfig[:vm_name]
+      
+      box.vm.provider "virtualbox" do |v|
+        v.memory = 1024
+        v.cpus = 1
+       end
+
+
+      boxconfig[:net].each do |ipconf|
+        box.vm.network("private_network", ip: ipconf[0], adapter: ipconf[1], netmask: ipconf[2], virtualbox__intnet: ipconf[3])
+      end
+
+
+      box.vm.provision "shell", inline: <<-SHELL
+        mkdir -p ~root/.ssh
+        cp ~vagrant/.ssh/auth* ~root/.ssh
+      SHELL
+
+    end
+  end
+end

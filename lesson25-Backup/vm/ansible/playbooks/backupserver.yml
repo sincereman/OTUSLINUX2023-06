@@ -1,0 +1,8 @@
+---
+
+- name: Playbook of "backupserver"
+  hosts:
+    - backupserver
+  become: true
+  roles:
+    - role: '../roles/backupserver'

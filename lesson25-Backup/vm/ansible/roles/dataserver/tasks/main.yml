@@ -1,0 +1,153 @@
+---
+
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - dataserver-datesync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - dataserver-datesync
+
+# Install BorgBackup
+ 
+- name: Install borgbackup
+  apt:
+    name: "borgbackup"
+    state: present
+    update_cache: yes
+  become: true
+  tags:
+    - dataserver
+    - borgbackup
+
+
+# Create SSH Key for borg users
+
+# - name: Create a 2048-bit SSH key for user root in ~root/.ssh/id_rsa
+#   ansible.builtin.user:
+#     name: root
+#     generate_ssh_key: yes
+#     ssh_key_bits: 2048
+#     ssh_key_file: .ssh/id_rsa_borg
+
+
+- name: Copy publickey for borg
+  template: 
+    src: "files/id_rsa.pub"
+    dest: ~root/.ssh/
+    mode: '0600'
+  tags:
+    - dataserverborgconfig
+    - dataserverprivatekey
+
+- name: Copy privatekey for borg
+  template: 
+    src: "files/id_rsa"
+    dest: ~root/.ssh/
+    mode: '0600'
+  tags:
+    - dataserverborgconfig
+    - dataserverprivatekey
+
+
+#Create config for borg
+
+- name: Config for borg
+  template: 
+    src: "files/borg-backup.sh"
+    dest: /etc/
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0755'
+  tags:
+    - dataserverborgconfig
+    - dataserver
+
+- name: Add Borg Service config
+  template: 
+    src: "files/borg-backup.service"
+    dest: /etc/systemd/system
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0755'
+  tags:
+    - dataserverborgconfig
+    - dataserver
+  
+- name: add default gateway for Routers
+  template: 
+    src: "files/borg-backup.timer"
+    dest: /etc/systemd/system
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0755'
+  tags:
+    - dataserverborgconfig
+    - dataserver
+
+#install borg-backup
+
+- name: borg-backup
+  service:
+    name: borg-backup
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+
+
+- name: borg-backup.timer
+  service:
+    name: borg-backup.timer
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+
+# - name: get | rsakey 
+#   shell: cat /root/.ssh/id_rsa_borg.pub
+#   ignore_errors: false
+#   become: true
+#   register: rsakey_content
+
+
+# - name: get| rsakey write to file
+#   local_action:
+#     module: lineinfile
+#     dest: "../../rsa-key/rsa-key-{{ inventory_hostname }}.txt"
+#     line: "{{ item['stdout'] }}"
+#     create: yes
+#   loop: "{{ rsakey_content['results'] }}"
+#   become: true
+#   changed_when: true
+
+
+# - name: Read SSH key
+#   ansible.builtin.slurp:
+#     src: "~root/.ssh/id_rsa_borg.pub"
+#   register: backup_local_ssh_key
+
+# - name: Print key
+#   ansible.builtin.debug:
+#     msg: "ssh-ed need to be decode: {{ backup_local_ssh_key['content']}}  - base64 --decode"
+
+# - name: get| rsakey write to file
+#   local_action:
+#     module: lineinfile
+#     dest: "../rsa-key/rsa-key-{{ inventory_hostname }}.txt"
+#     line: "{{ backup_local_ssh_key['content']}}"
+#     create: yes
+#   become: true
+#   changed_when: true
