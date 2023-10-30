@@ -1,0 +1,22 @@
+---
+- name: test | mtr
+  debug:
+    msg: "I am {{ inventory_hostname }}"
+
+- name: test | mtr foreign host
+  shell: mtr -r {{ item }}
+  loop: "{{ to }}"
+  ignore_errors: false
+  become: true
+  register: mtr_content
+
+
+- name: test | mtr foreign host write to file
+  local_action:
+    module: lineinfile
+    dest: "../../filestestmtr/{{ inventory_hostname }} - {{ item['cmd'] }}.txt"
+    line: "{{ item['stdout'] }}"
+    create: yes
+  loop: "{{ mtr_content['results'] }}"
+  become: true
+  changed_when: true

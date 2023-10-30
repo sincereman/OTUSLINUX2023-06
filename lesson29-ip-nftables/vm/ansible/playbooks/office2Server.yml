@@ -1,0 +1,7 @@
+---
+- name: Playbook of "office2Server"
+  hosts:
+    - office2Server
+  become: true
+  roles:
+    - role: '../roles/office2Server'

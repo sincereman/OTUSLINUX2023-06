@@ -1,0 +1,7 @@
+---
+- name: Playbook of "centralServer"
+  hosts:
+    - centralServer
+  become: true
+  roles:
+    - role: '../roles/centralServer'

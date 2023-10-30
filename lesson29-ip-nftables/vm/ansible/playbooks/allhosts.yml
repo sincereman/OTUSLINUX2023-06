@@ -1,0 +1,70 @@
+---
+
+#Inet
+
+- name: Playbook of "InetRouter"
+  hosts:
+    - inetRouter
+  become: true
+  roles:
+    - role: '../roles/inetRouter'
+
+#InetRouter2
+
+- name: Playbook of "InetRouter2"
+  hosts:
+    - inetRouter2
+  become: true
+  roles:
+    - role: '../roles/inetRouter2'
+
+#Routers
+
+- name: Playbook of "centralRouter"
+  hosts:
+    - centralRouter
+  become: true
+  roles:
+    - role: '../roles/centralRouter'
+
+- name: Playbook of "office1Router"
+  hosts:
+    - office1Router
+  become: true
+  roles:
+    - role: '../roles/office1Router'
+
+- name: Playbook of "office2Router"
+  hosts:
+    - office2Router
+  become: true
+  roles:
+    - role: '../roles/office2Router'
+
+#Servers
+
+- name: Playbook of "centralServer"
+  hosts:
+    - centralServer
+  become: true
+  roles:
+    - role: '../roles/centralServer'
+
+- name: Playbook of "office1Server"
+  hosts:
+    - office1Server
+  become: true
+  roles:
+    - role: '../roles/office1Server'
+
+- name: Playbook of "office2Server"
+  hosts:
+    - office2Server
+  become: true
+  roles:
+    - role: '../roles/office2Server'
+
+
+
+
+
