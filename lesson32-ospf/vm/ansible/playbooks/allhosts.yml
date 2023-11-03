@@ -1,0 +1,35 @@
+---
+
+
+#Routers
+
+- name: Playbook of "router1"
+  hosts:
+    - router1
+  become: true
+  roles:
+    - role: '../roles/router1'
+
+- name: Playbook of "router2"
+  hosts:
+    - router2
+  become: true
+  roles:
+    - role: '../roles/router2'
+
+- name: Playbook of "router3"
+  hosts:
+    - router3
+  become: true
+  roles:
+    - role: '../roles/router3'
+
+
+    
+
+
+
+
+
+
+

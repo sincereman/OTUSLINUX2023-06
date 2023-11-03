@@ -1,0 +1,11 @@
+---
+
+- name: systemctl daemon reload
+  systemd:
+    daemon_reload: yes
+
+
+- name: systemctl frr restart
+  systemd: 
+    state: restarted
+    name: frr

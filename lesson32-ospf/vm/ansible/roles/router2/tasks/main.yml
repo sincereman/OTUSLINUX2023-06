@@ -1,0 +1,183 @@
+---
+
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - router-ospf-chrony
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - router-ospf-chrony
+
+# Устанавливаем инструменты анализа сети
+- name: install base tools
+  apt:
+    name:
+      - traceroute
+      - tcpdump
+      - net-tools
+      - mtr
+      - netplan.io
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+
+#d Отключаем ufw
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+    - inetrouter
+
+  # Добавляем gpg-key репозитория
+- name: add gpg frrouting.org
+  apt_key:
+    url: "https://deb.frrouting.org/frr/keys.asc"
+    state: present
+  become: true
+
+  # Добавляем репозиторий https://deb.frrouting.org/frr
+- name: add frr repo
+  apt_repository:
+    repo: 'deb https://deb.frrouting.org/frr {{ ansible_distribution_release }} frr-stable'
+    state: present
+
+  # Обновляем пакеты и устанавливаем FRR
+- name: install FRR packages
+  apt:
+    name: 
+      - frr
+      - frr-pythontools
+    state: present
+    update_cache: true
+
+  # Включаем маршрутизацию транзитных пакетов
+- name: set up forward packages across routers
+  sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    state: present
+  notify:
+    - systemctl daemon reload
+
+# Настройка frr daemons
+- name: Enable zebra in /etc/frr/daemons 
+  ansible.builtin.lineinfile:
+    path: /etc/frr/daemons 
+    regexp: 'zebra=no'
+    line: 'zebra=yes'
+    owner: frr
+    group: frr
+    mode: 0640
+  notify:
+    - systemctl daemon reload
+    - systemctl frr restart
+
+# Настройка frr daemons
+- name: Enable ospf in /etc/frr/daemons 
+  ansible.builtin.lineinfile:
+    path: /etc/frr/daemons
+    regexp: 'ospfd=no'
+    line: 'ospfd=yes'
+    owner: frr
+    group: frr
+    mode: 0640
+  notify:
+    - systemctl daemon reload
+    - systemctl frr restart
+
+# Расскомментировать для части 1
+  
+  # Копируем файл frr.conf на хосты, указываем владельца и права
+- name: set up OSPF 
+  template:
+    src: files/frr.conf.j2
+    dest: /etc/frr/frr.conf
+    owner: frr
+    group: frr
+    mode: 0640
+  tags:
+    - setup_ospf
+
+    # Перезапускам FRR и добавляем в автозагрузку
+- name: restart FRR
+  service:
+    name: frr
+    state: restarted
+    enabled: true
+  tags:
+    - setup_ospf    
+
+
+# Расскоментировать для части 2
+# Отключаем запрет ассиметричного роутинга 
+- name: set up asynchronous routing
+  sysctl:
+    name: net.ipv4.conf.all.rp_filter
+    value: '0'
+    state: present
+  tags:
+    - setup_ospf
+    - assimectricrouting
+
+
+
+
+
+
+
+
+
+
+# #disable default route
+# - name: disable default route
+#   template: 
+#     src: files/00-installer-config.yaml
+#     dest: /etc/netplan/00-installer-config.yaml
+#     owner: root
+#     group: root
+#     mode: 0644
+
+
+
+# # Add routing and ip addresses
+
+# - name: add default gateway for Routers
+#   template: 
+#     src: "files/netplan_{{ansible_hostname}}.yaml"
+#     dest: /etc/netplan/50-vagrant.yaml
+#     owner: root
+#     group: root
+#     mode: 0644
+
+# - name: Apply and reload the new config address with netplan
+#   command: netplan apply
+#   become: true
+#   async: 100
+#   poll: 0
+
+
+
+

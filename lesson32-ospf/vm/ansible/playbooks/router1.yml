@@ -1,0 +1,7 @@
+---
+- name: Playbook of "router1"
+  hosts:
+    - router1
+  become: true
+  roles:
+    - role: '../roles/router1'

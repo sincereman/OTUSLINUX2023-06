@@ -1,0 +1,4 @@
+[routers]
+router1 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson32-ospf/vm/.vagrant/machines/router1/virtualbox/private_key ansible_ssh_port=2222 ansible_ssh_transfer_method=scp router_id=1.1.1.1
+router2 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson32-ospf/vm/.vagrant/machines/router2/virtualbox/private_key ansible_ssh_port=2200 ansible_ssh_transfer_method=scp router_id=2.2.2.2
+router3 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson32-ospf/vm/.vagrant/machines/router3/virtualbox/private_key ansible_ssh_port=2201 ansible_ssh_transfer_method=scp router_id=3.3.3.3
