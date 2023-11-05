@@ -1,0 +1,204 @@
+---
+
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+  tags:
+    - tun
+    - tap
+    - ras
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - vpn-chrony
+    - tun
+    - tap
+    - ras
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - vpn-chrony
+    - tun
+    - tap
+    - ras
+
+# Устанавливаем инструменты анализа сети
+- name: install base tools
+  apt:
+    name:
+      - traceroute
+      - tcpdump
+      - net-tools
+      - mtr
+      - curl
+      - iperf3
+    state: present
+    update_cache: true
+  tags:
+    - tun
+    - tap
+    - ras
+
+#d Отключаем ufw
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+    - inetrouter
+    - tun
+    - tap
+    - ras
+
+  # Включаем маршрутизацию транзитных пакетов
+- name: set up forward packages across routers
+  sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    state: present
+  notify:
+    - systemctl daemon reload
+  tags:
+    - tun
+    - tap
+    - ras
+
+# Устанавливаем OPENVPN and EASY-RSA
+- name: install base tools
+  apt:
+    name:
+      - easy-rsa
+      - openvpn
+    state: present
+    update_cache: true
+  tags:
+    - tun
+    - tap
+    - ras
+
+- name: Create file for logs
+  ansible.builtin.file:
+    path: /var/log/openvpn-status.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+  tags:
+    - tun
+    - tap
+    - ras
+
+- name: Create file for logs
+  ansible.builtin.file:
+    path: /var/log/openvpn.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+  tags:
+    - tun
+    - tap
+    - ras
+
+# Конфигурируем static.key Предварительно сгенерирован openvpn --genkey --secret ./ansible...../static.key
+
+- name: Copy "static.key" file
+  copy:
+    src: ../files/static.key
+    dest: /etc/openvpn/static.key
+    owner: root
+    group: root
+    mode: '0600'
+  notify:
+    - service restart openvpn
+  tags:
+    - tap
+    - tun
+
+# Конфигурируем TAP
+
+- name: Copy "clienttap.conf" file
+  copy:
+    src: ../files/clienttap.conf
+    dest: /etc/openvpn/clienttap.conf
+  notify:
+    - systemctl daemon reload
+    - service restart openvpn
+  tags:
+    - tap
+
+
+# Конфигурируем TUN
+
+- name: Copy "clienttun.conf" file
+  copy:
+    src: ../files/clienttun.conf
+    dest: /etc/openvpn/clienttun.conf
+  notify:
+    - systemctl daemon reload
+    - service restart openvpn
+  tags:
+    - tun
+
+# Конфигурируем RAS
+
+- name: Copy "clientras.conf" file
+  copy:
+    src: ../files/clientras.conf
+    dest: /etc/openvpn/clientras.conf
+  notify:
+    - systemctl daemon reload
+    - service restart openvpn
+  tags:
+    - ras
+
+# Конфигурируем RAS ca.crt
+- name: Copy "ca.crt" file
+  copy:
+    src: ../files/clientras/vpnserver/etc/openvpn/pki/ca.crt
+    dest: /etc/openvpn/ca.crt
+  notify:
+    - systemctl daemon reload
+    - service restart openvpn
+  tags:
+    - ras
+
+# Конфигурируем RAS vpnclient.crt
+
+- name: Copy "vpnclient.crt" file
+  copy:
+    src: ../files/clientras/vpnserver/etc/openvpn/pki/issued/vpnclient.crt
+    dest: /etc/openvpn/vpnclient.crt
+  notify:
+    - systemctl daemon reload
+    - service restart openvpn
+  tags:
+    - ras
+
+# Конфигурируем RAS vpnclient.key
+
+- name: Copy "vpnclient.key" file
+  copy:
+    src: ../files/clientras/vpnserver/etc/openvpn/pki/private/vpnclient.key
+    dest: /etc/openvpn/vpnclient.key
+  notify:
+    - systemctl daemon reload
+    - service restart openvpn
+  tags:
+    - ras

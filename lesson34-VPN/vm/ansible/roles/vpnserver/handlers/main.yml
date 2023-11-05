@@ -1,0 +1,13 @@
+---
+- name: systemctl daemon reload
+  systemd:
+    daemon_reload: yes
+
+- name: service restart openvpn
+  systemd: 
+    state: restarted
+    name: openvpn
+
+
+
+
