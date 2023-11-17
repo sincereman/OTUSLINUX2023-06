@@ -1,0 +1,43 @@
+---
+
+
+#ns
+
+- name: Playbook of "ns01"
+  hosts:
+    - ns01
+  become: true
+  roles:
+    - role: '../roles/ns01'
+
+- name: Playbook of "ns02"
+  hosts:
+    - ns02
+  become: true
+  roles:
+    - role: '../roles/ns02'
+
+
+# client
+- name: Playbook of "client1"
+  hosts:
+    - client1
+  become: true
+  roles:
+    - role: '../roles/clients'
+
+- name: Playbook of "client2"
+  hosts:
+    - client2
+  become: true
+  roles:
+    - role: '../roles/clients'
+
+    
+
+
+
+
+
+
+

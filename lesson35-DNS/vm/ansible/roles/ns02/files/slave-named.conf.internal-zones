@@ -1,0 +1,123 @@
+server 192.168.56.11 {
+        keys { zonetransfer.key; };
+};
+
+
+### client key for split dns part2
+
+
+
+
+key "client1.key" {
+	algorithm hmac-sha512;
+	secret "wFuP4XkMQ5RekP4/ecodsQM+K5zutTtzjcfupA/SQwYla1w+kDn0gaW2/O3J9MrZr6iAnRlH4EWsGt/pRuLiPQ==";
+};
+
+key "client2.key" {
+	algorithm hmac-sha512;
+	secret "bMAtc3lpzunsz2b1MdeG2aoseC063P9djT/POUHYCxYKJTWutZ0HhmfSPvUpS1W9+JeIFXiHoCOFBECf4ZanrQ==";
+};
+
+## WHO CAN USE OF VIEW
+
+
+// Указание Access листов 
+acl client1 { !key client2.key; key client1.key; 192.168.56.15; };
+acl client2 { !key client1.key; key client2.key; 192.168.56.16; };
+
+view "client1" {
+    // Кому из клиентов разрешено подключаться, нужно указать имя access-листа
+    match-clients { client1; };
+
+    // Описание зоны dns.lab для client
+    zone "dns.lab" {
+        // Тип сервера — мастер
+        type slave;
+        // Добавляем ссылку на файл зоны
+        file "named.dns.lab.client1";
+        masters { 192.168.56.10 key "client1.key"; };
+    };
+
+    // ddns.lab zone
+    zone "ddns.lab" {
+        type slave;
+        file "named.ddns.lab.client1";
+        masters { 192.168.56.10 key "client1.key"; };
+    };
+};
+
+// Описание view для client2
+view "client2" {
+    match-clients { client2; };
+
+    // dns.lab zone
+    zone "dns.lab" {
+        type slave;
+        file "named.dns.lab.client2";
+        masters { 192.168.56.10 key "client2.key"; };
+    };
+
+    // dns.lab zone reverse
+    zone "56.168.192.in-addr.arpa" {
+        type slave;
+        file "named.dns.lab.client2.rev";
+        masters { 192.168.56.10 key "client2.key"; };
+    };
+};
+
+### END of Part2
+
+
+view "internal" {
+
+        match-clients {
+                localhost;
+                127.0.0.1;
+                192.168.56.0/24;
+                key "zonetransfer.key";
+        };
+        allow-transfer { key "zonetransfer.key"; };
+        zone "dns.lab" {
+            type slave;
+            file "named.dns.lab";
+            masters { 192.168.56.10 key "zonetransfer.key"; };
+        };
+        zone "56.168.192.in-addr.arpa" {
+            type slave;
+            file "named.dns.lab.rev";
+            masters { 192.168.56.10 key "zonetransfer.key"; };
+        };
+        // labs ddns zone
+        zone "ddns.lab" {
+            type slave;
+            file "named.ddns.lab";
+            masters { 192.168.56.10 key "zonetransfer.key"; };
+        };
+        include "/etc/bind/named.conf.default-zones";
+
+};
+
+// настройки логирования
+logging {
+          channel "misc" {
+                    file "/var/log/named/misc.log" versions 4 size 4m;
+                    print-time yes;
+                    print-severity yes;
+                    print-category yes;
+          };
+
+          channel "query" {
+                    file "/var/log/named/query.log" versions 4 size 4m;
+                    print-time yes;
+                    print-severity no;
+                    print-category no;
+          };
+
+          category default {
+                    "misc";
+          };
+
+          category queries {
+                    "query";
+          };
+};

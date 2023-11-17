@@ -1,0 +1,7 @@
+---
+- name: Playbook of "ns02"
+  hosts:
+    - ns02
+  become: true
+  roles:
+    - role: '../roles/ns02'

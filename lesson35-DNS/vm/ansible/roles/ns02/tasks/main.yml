@@ -1,0 +1,188 @@
+---
+
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - chrony
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - chrony
+
+# Устанавливаем инструменты анализа сети
+- name: install base tools
+  apt:
+    name:
+      - traceroute
+      - tcpdump
+      - net-tools
+      - mtr
+    state: present
+    update_cache: true
+
+
+#d Отключаем ufw
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+
+
+  # Обновляем пакеты и устанавливаем BIND
+- name: install BIND packages
+  apt:
+    name: 
+      - bind9
+      - bind9-utils
+    state: present
+    update_cache: true
+  tags:
+    - ufwoff
+
+#Копируем ключ для трансфера зоны 
+
+- name: copy transferkey to all servers and the client
+  copy:
+    src: files/named.zonetransfer.key
+    dest: /etc/bind/named.zonetransfer.key
+    owner: root
+    group: bind
+    mode: 0644
+  tags:
+    - transferkey
+
+
+#Копирование конфигурации DNS-сервера options
+- name: copy named.conf
+  ansible.builtin.copy:
+    src: files/slave-named.conf
+    dest: /etc/bind/named.conf
+    owner: root
+    group: bind
+    mode: 0640
+  tags:
+    - named.conf
+
+
+#Копирование конфигурации DNS-сервера options
+- name: copy named.conf.options
+  ansible.builtin.copy:
+    src: files/slave-named.conf.options
+    dest: /etc/bind/named.conf.options
+    owner: root
+    group: bind
+    mode: 0640
+  tags:
+    - named.conf.options
+
+#Копирование конфигурации DNS-сервера zones
+- name: copy named.conf.internal-zones
+  ansible.builtin.copy:
+    src: files/slave-named.conf.internal-zones
+    dest: /etc/bind/named.conf.internal-zones
+    owner: root
+    group: bind
+    mode: 0640
+  tags:
+    - named.conf.internalzones
+
+#Создание лог файлов
+
+- name: Create a directory BIND if it does not exist
+  ansible.builtin.file:
+    path: /var/log/named
+    state: directory
+    owner: root
+    group: bind
+    mode: '0774'
+
+
+- name: Change file query.log  ownership, group and permissions
+  ansible.builtin.file:
+    path: /var/log/named/query.log
+    state: touch
+    owner: bind
+    group: bind
+    mode: '0774'
+
+- name: Change file misc.log ownership, group and permissions
+  ansible.builtin.file:
+    path: /var/log/named/misc.log
+    state: touch
+    owner: root
+    group: bind
+    mode: '0774'  
+
+- name: Change file /var/log/named_stats.log ownership, group and permissions
+  ansible.builtin.file:
+    path: /var/log/named/named_stats.log
+    state: touch
+    owner: root
+    group: bind
+    mode: '0774' 
+
+# #Копирование файлов с настроками зоны. 
+# #Будут скопированы все файлы, в имя которых начинается на «named.d»
+# - name: copy zones
+#   ansible.builtin.copy:
+#     src: "{{ item }}"
+#     dest: /etc/bind/
+#     owner: bind
+#     group: bind
+#     mode: 0660
+#   with_fileglob:
+#     - named.d*
+#   tags:
+#     - zoneconf
+
+#Копирование файла resolv.conf
+- name: copy resolv.conf to the servers
+  copy: 
+    src: files/servers-resolv.conf
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: 0644
+  tags:
+    - resolv.conf
+
+#Изменение прав каталога /etc/named
+#Права 670, владелец — root, группа — named  
+- name: set /etc/bind permissions
+  file:
+    path: /etc/bind
+    owner: root
+    group: bind
+    mode: 0670
+  tags:
+    - permbind
+
+#Перезапуск службы Named и добавление её в автозагрузку
+- name: ensure bind9 is running and enabled
+  service:
+    name: bind9
+    state: restarted
+    enabled: yes
+  tags:
+    - bind9restart
+

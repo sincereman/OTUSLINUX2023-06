@@ -1,0 +1,34 @@
+acl "trusted" {
+#10.128.10.11;    # ns1 - can be set to localhost
+192.168.56.0/24;
+127.0.0.1;
+#key "zonetransfer.key";
+};
+
+options {
+
+    // network 
+	listen-on port 53 { 127.0.0.1; 192.168.56.11; };
+	listen-on-v6 { none; };
+
+    // data
+	directory "/var/cache/bind";
+
+    // server
+	recursion yes;
+    allow-recursion { trusted; };  # allows recursive queries from "trusted" clients
+	allow-query     { trusted;};
+    allow-transfer { trusted; };
+    // forwarders { 8.8.8.8; 8.8.4.4; };
+    dnssec-validation yes;
+    auth-nxdomain no;    # conform to RFC1035
+    zone-statistics yes;
+    statistics-file "/var/log/named/named_stats.log";
+
+};
+
+include "/etc/bind/rndc.key";
+controls {
+       inet 127.0.0.1 port 953
+       allow { 127.0.0.1; } keys { "rndc-key"; };
+};

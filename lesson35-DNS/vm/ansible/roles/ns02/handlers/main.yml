@@ -1,0 +1,11 @@
+---
+
+- name: systemctl daemon reload
+  systemd:
+    daemon_reload: yes
+
+
+- name: systemctl bind restart
+  systemd: 
+    state: restarted
+    name: bind9

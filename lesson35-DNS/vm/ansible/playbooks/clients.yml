@@ -1,0 +1,14 @@
+---
+- name: Playbook of "client1"
+  hosts:
+    - client1
+  become: true
+  roles:
+    - role: '../roles/clients'
+
+- name: Playbook of "client2"
+  hosts:
+    - client2
+  become: true
+  roles:
+    - role: '../roles/clients'
