@@ -300,6 +300,7 @@ netplan --debug generate
 
 ## На клиенте 1
 
+```shell
 root@testClient1:/home/vagrant# ip a
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
@@ -332,9 +333,11 @@ root@testClient1:/home/vagrant# ip a
        valid_lft forever preferred_lft forever
     inet6 fe80::a00:27ff:fe8b:53c7/64 scope link 
        valid_lft forever preferred_lft forever
-
+```
 
 ## На сервере 1
+
+```shell
 
 root@testServer1:/home/vagrant# ip a
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
@@ -369,6 +372,9 @@ root@testServer1:/home/vagrant# ip a
     inet6 fe80::a00:27ff:feec:21cd/64 scope link 
        valid_lft forever preferred_lft forever
 
+```
+
+```shell
 
 root@testClient1:/home/vagrant# ping 10.10.10.1
 PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
@@ -377,7 +383,12 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 ^C
 --- 10.10.10.1 ping statistics ---
 
+```
+
+
 ## На клиенте 2
+
+```shell
 
 vagrant@testClient2:~$ sudo -s
 root@testClient2:/home/vagrant# ip a
@@ -424,7 +435,7 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 rtt min/avg/max/mdev = 8.405/10.227/12.049/1.822 ms
 root@testClient2:/home/vagrant# 
 
-
+```
 
 ## Часть 1 задания выполнена
 
@@ -863,12 +874,14 @@ default via 10.0.2.2 dev eth0 proto dhcp src 10.0.2.15 metric 100
 
 Проверяю - работает.
 
+```shell
 root@inetRouter:/home/vagrant# ping 192.168.255.2
 PING 192.168.255.1 (192.168.255.1) 56(84) bytes of data.
 64 bytes from 192.168.255.2: icmp_seq=1 ttl=64 time=0.035 ms
 64 bytes from 192.168.255.2: icmp_seq=2 ttl=64 time=0.211 ms
 64 bytes from 192.168.255.2: icmp_seq=3 ttl=64 time=0.224 ms
 
+```
 
 # Задание выполнено.
 
