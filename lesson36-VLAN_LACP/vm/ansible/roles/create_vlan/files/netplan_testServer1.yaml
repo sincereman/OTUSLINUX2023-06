@@ -1,0 +1,22 @@
+---
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      dhcp4: true
+    eth1: {}
+    #Set VLAN
+    eth2:
+      addresses: [192.168.56.22/24]
+  vlans:
+        #Name of VLAN  
+    vlan10:
+        #Set  VLAN`  
+      id: 10
+        #Name of ph intergace
+      link: eth1
+        #Disable DHCP
+      dhcp4: no
+        #Set IP
+      addresses: [10.10.10.1/24]

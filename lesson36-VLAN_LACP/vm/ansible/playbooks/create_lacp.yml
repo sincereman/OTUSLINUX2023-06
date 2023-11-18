@@ -1,0 +1,8 @@
+---
+- name: Playbook Create of LACP
+  hosts:
+    - inetRouter
+    - centralRouter
+  become: true
+  roles:
+    - role: '../roles/create_lacp'

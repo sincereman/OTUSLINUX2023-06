@@ -1,0 +1,10 @@
+---
+- name: Playbook Create of VLAN
+  hosts:
+    - testServer1
+    - testServer2
+    - testClient1
+    - testClient2
+  become: true
+  roles:
+    - role: '../roles/create_vlan'
