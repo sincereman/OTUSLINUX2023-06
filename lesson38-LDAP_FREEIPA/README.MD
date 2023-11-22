@@ -612,6 +612,7 @@ Warning: Permanently added '192.168.57.10' (ECDSA) to the list of known hosts.
 
 Так как проверка SUDO стала настроена через sss (часть ipa), то мы можешь создать в IPA Server  политику для группы или пользователя и разрешить ей ALL в sudo
 
+```shell
 sh-4.4# cat /etc/nsswitch.conf | grep shadow
 # Valid databases are: aliases, ethers, group, gshadow, hosts,
 # rpc, services, and shadow.
@@ -621,7 +622,11 @@ gshadow:    files
 sh-4.4# cat /etc/nsswitch.conf | grep sudo
 sudoers:    files sss
 
+```
+
 Скрин из админки в images
+
+```shell
 
 sincere@sincere-ubuntuotus:~/vagrantdocs/lesson38-LDAP_FREEIPA/vm/ansible/roles/ipaclient/files$ ssh -i ./id_rsa sincere@192.168.57.11
 Last login: Wed Nov 22 13:08:08 2023 from 192.168.57.1
@@ -629,7 +634,9 @@ Last login: Wed Nov 22 13:08:08 2023 from 192.168.57.1
 [sudo] password for sincere: 
 sh-4.4# 
 
-Пароль запросил, так как на клиенте нет приватного ключа.
+```
+
+Пароль для sudo запросил, так как на клиенте нет приватного ключа.
 
 Так как я в большей степени windows админ и хорошо знаком с AD, то на базовом принципе уже понимаю, что с 60% простого функционала USER-GROUPS можно вполне простыми методами закрыть. Наверное пока не увидел аналога GPO, но с PKI и прочим наверное больших проблем не должно быть.
 Конечно вопрос если  что-то сломается, то с траблшутингом с учетом количества компонентов пока не очень ясно понятно))
