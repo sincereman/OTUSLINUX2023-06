@@ -1,0 +1,180 @@
+---
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+# - name: Install EPEL Repo package from standard repo
+#   yum:
+#     name: epel-release
+#     state: present
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  yum:
+    name: chrony
+    state: latest
+  tags:
+    - chrony-datesync
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - chrony-datesync
+
+
+#iptables
+
+#TCP Ports:
+#* 80, 443: HTTP/HTTPS
+#* 389, 636: LDAP/LDAPS
+#* 88, 464: kerberos
+#* 53: bind
+#UDP Ports:
+#* 88, 464: kerberos
+#* 53: bind
+#* 123: ntp
+
+
+- name: Allow connections on multiple tcp ports for IPASERVER
+  ansible.builtin.iptables:
+    chain: INPUT
+    source: 192.168.57.0/24
+    protocol: tcp
+    jump: ACCEPT
+    destination_port: "{{item}}"
+  with_items: ['80', '443', '389', '636', '88', '464', '53']
+  tags:
+    - iptablestcpipa
+
+- name: Allow connections on multiple udp ports for IPASERVER
+  ansible.builtin.iptables:
+    chain: INPUT
+    source: 192.168.57.0/24
+    protocol: udp
+    jump: ACCEPT    
+    destination_port: "{{item}}"
+  with_items: ['123', '88', '464', '53']
+  tags:
+    - iptablesudpipa
+
+# #reboot
+
+
+# - name: Reboot VM
+#   reboot:
+#     reboot_timeout: 600
+#   tags:
+#     - deploy
+
+
+#Add string to /etc/hosts
+- name: Add 192.168.57.10 to hosts file
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{item}}"
+    owner: root
+    group: root
+    mode: '0644'
+  with_items: ['127.0.0.1   localhost localhost.localdomain', '192.168.57.10 ipa.otus.lan ipa']  
+  tags:
+    - iparesolv
+
+- name: Install @idm:DL1
+  yum:
+    name: "@idm:DL1"
+    state: present
+  tags:
+    - installDL1
+
+
+- name: Install ipa-server
+  yum:
+    name: ipa-server
+    state: latest
+  tags:
+    - installipaserver
+
+- name: Install ipa-server-dns
+  yum:
+    name: ipa-server-dns
+    state: latest
+  tags:
+    - installipaserver
+    - installipaserverdns
+
+
+
+# ## install pexpect for ansible ansible.builtin.expect
+# - name: Install python-pip for pexpect promt answering
+#   yum:
+#     name: python3-pip
+#     state: latest
+#   tags:
+#     - install-python-pip
+
+# - name: Pip install pexpect
+#   pip:
+#     name: pexpect
+#   tags:
+#     - install-pexpect
+
+
+# - name: Configure ipa-server
+#   ansible.builtin.expect:
+#     command: ipa-server-install
+#     responses:
+#       # Using last defined value only
+#       '(?i)Do you want to configure integrated DNS(?i)': 'yes'
+#       '(?i)Server host name(?i)': 'ipa.otus.lan'
+#       '(?i)Please confirm the domain name(?i)': 'otus.lan'
+#       '(?i)Please provide a realm name(?i)': 'OTUS.LAN'
+#       '(?i)Directory Manager password(?i)': 'Otus2023!'
+#       '(?i)Password \(confirm\)(?i)': 'Otus2023!'
+#       '(?i)IPA admin password(?i)': 'Otus2023!'
+#       '(?i)Password \(confirm\)(?i)': 'Otus2023!'
+#       '(?i)Do you want to configure DNS forwarders(?i)': 'yes'
+#       '(?i)Do you want to configure these servers as DNS forwarders(?i)': 'yes'
+#       '(?i)All detected DNS servers were added. You can enter additional addresses now(?i)Enter an IP address for a DNS forwarder, or press Enter to skip(?i)': '8.8.8.8'
+#       '(?i)Enter an IP address for a DNS forwarder, or press Enter to skip(?i)': ''
+#       '(?i)Do you want to search for missing reverse zones(?i)': 'yes'
+#       '(?i)Do you want to create reverse zone for IP(?i)': 'yes'
+#       '(?i)Please specify the reverse zone name(?i)': ''
+#       '(?i)NetBIOS domain name(?i)': 'OTUS'
+#       '(?i)Do you want to configure chrony with NTP server or pool address(?i)': 'no'
+#       '(?i)Continue to configure the system with these values(?i)': 'yes'
+#       'restarting directory server': 'yes'
+#     timeout: 60000
+#   register: ipa_server_configure_log
+#   tags:
+#     - configureipaserver
+
+
+- name: Configure ipa-server
+  command: ipa-server-install -U \
+            --ds-password=Otus2023! \
+            --admin-password=Otus2023! \
+            --ip-address=192.168.57.10
+            --auto-reverse \
+            --domain=otus.lan \
+            --realm=OTUS.LAN \
+            --hostname=ipa.otus.lan \
+            --mkhomedir \
+            --setup-dns \
+            --forwarder=8.8.8.8 \
+            --no-ntp \
+            -v \
+            --log-file=/var/log/ipaserver-install.log 
+  register: ipa_server_configure_log
+  tags:
+    - configureipaserver
+
+- name: Debug registered var
+  debug: var=ipa_server_configure_log

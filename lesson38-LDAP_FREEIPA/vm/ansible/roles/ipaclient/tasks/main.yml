@@ -1,0 +1,113 @@
+---
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  yum:
+    name: chrony
+    state: latest
+  tags:
+    - chrony-datesync
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - chrony-datesync
+
+
+#iptables
+
+#TCP Ports:
+#* 80,HTTP/HTTPS
+#* 389, 636: LDAP/LDAPS
+#* 88, 464: kerberos
+
+#UDP Ports:
+#* 88, 464: kerberos
+#* 123: ntp
+
+
+- name: Allow connections on multiple tcp ports for IPASERVER
+  ansible.builtin.iptables:
+    chain: INPUT
+    source: 192.168.57.0/24
+    protocol: tcp
+    jump: ACCEPT
+    destination_port: "{{item}}"
+  with_items: ['80', '443', '389','88', '464']
+  tags:
+    - iptablestcpipa
+
+- name: Allow connections on multiple udp ports for IPASERVER
+  ansible.builtin.iptables:
+    chain: INPUT
+    source: 192.168.57.0/24
+    protocol: udp
+    jump: ACCEPT    
+    destination_port: "{{item}}"
+  with_items: ['123', '88', '464']
+  tags:
+    - iptablesudpipa
+
+# #reboot
+
+
+# - name: Reboot VM
+#   reboot:
+#     reboot_timeout: 600
+#   tags:
+#     - deploy
+
+
+#Add string to /etc/resolv.conf
+- name: Add 192.168.57.10 to hosts file
+  ansible.builtin.lineinfile:
+    path: /etc/resolv.conf
+    line: "{{item}}"
+  with_items: ['search otus.lan', 'nameserver 192.168.57.10']  
+  tags:
+    - iparesolv
+
+- name: Install @idm:DL1
+  yum:
+    name: "@idm:DL1"
+    state: present
+  tags:
+    - installDL1
+
+
+- name: Install ipa-client
+  yum:
+    name: ipa-client
+    state: latest
+  tags:
+    - installipaclient
+
+
+- name: configure ipa-client
+  command: |
+    ipa-client-install -U \
+    --principal admin@OTUS.LAN \
+    --password Otus2023! \
+    --server ipa.otus.lan \
+    --domain otus.lan \
+    --realm OTUS.LAN \
+    --mkhomedir \
+    --force-join
+  register: ipa_client_configure_log
+  tags:
+    - configureipaclient
+
+- name: Debug registered var
+  debug: var=ipa_client_configure_log

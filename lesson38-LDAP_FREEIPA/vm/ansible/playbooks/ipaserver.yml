@@ -1,0 +1,7 @@
+---
+- name: Playbook of "ipaserver"
+  hosts:
+    - ipa.otus.lan
+  become: true
+  roles:
+    - role: '../roles/ipaserver'
