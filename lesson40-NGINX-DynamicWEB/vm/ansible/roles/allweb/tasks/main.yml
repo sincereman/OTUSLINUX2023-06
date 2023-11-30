@@ -1,0 +1,137 @@
+---
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+# - name: Install EPEL Repo package from standard repo
+#   yum:
+#     name: epel-release
+#     state: present
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  yum:
+    name: chrony
+    state: latest
+  tags:
+    - chrony-datesync
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - chrony-datesync
+
+
+- name: Install docker packages # устанавливаем пакеты необходимые для установки докера
+  become: true
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+    - gpg
+  tags:
+    - docker
+
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+
+- name: Add Docker APT repository
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/{{ ansible_system | lower }}/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
+
+- name: Install Docker CE
+  apt:
+    name: ['docker-ce', 'docker-ce-cli', 'containerd.io']
+    update_cache: yes
+
+- name: Install prerequisites for docker-compose
+  apt:
+    name: ['python3-pip', 'python3-setuptools', 'virtualenv']
+
+- name: Install docker-compose
+  pip:
+    name: docker-compose
+
+# - name: Add Docker s official GPG key
+#   become: true
+#   apt_key:
+#     url: https://download.docker.com/linux/ubuntu/gpg
+#     state: present
+#   tags:
+#     - docker
+
+# - name: Verify that we have the key with the fingerprint
+#   become: true   
+#   apt_key:
+#     id: 0EBFCD88
+#     state: present
+#   tags:
+#     - docker
+
+# - name: Set up the stable repository # добавляем репозиторий докера
+#   become: true    
+#   apt_repository:
+#     repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+#     state: present
+#     update_cache: yes
+#   tags:
+#     - docker
+  
+# - name: Update apt packages
+#   become: true    
+#   apt:
+#     update_cache: yes
+#   tags:
+#     - docker
+
+# - name: Install docker # установка докера
+#   become: true    
+#   apt:
+#     name: docker-ce
+#     state: present
+#     update_cache: yes
+#   tags:
+#     - docker
+
+- name: Add remote "vagrant" user to "docker" group
+  become: true
+  user:
+    name: vagrant
+    group: "docker"
+    append: yes
+  tags:
+    - docker
+
+- name: Install docker-compose 
+  become: true
+  get_url:
+    url : https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: 0777
+
+- name: Copy project # Копируем проект с хост машины в созданную через vagrant
+  copy: 
+    src: "../files/project"
+    dest: /home/vagrant
+
+- name: reset ssh connection # чтобы применились права на использование docker, необходимо перелогиниться
+  meta: reset_connection
+
+- name: Run container
+  shell:
+    cmd: "docker-compose -f docker-compose.yml up -d"
+    chdir: /home/vagrant/project

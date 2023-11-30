@@ -1,0 +1,28 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+MACHINES=[
+  {
+    :hostname => "web",
+    :ip => "192.168.56.10",
+    :box_name => "debian/bullseye64"
+  }
+]
+
+Vagrant.configure(2) do |config|
+    MACHINES.each do |machine|
+        config.vm.define machine[:hostname] do |node|
+            node.vm.box = machine[:box_name]
+            node.vm.hostname = machine[:hostname]
+    
+            node.vm.network "private_network", ip: machine[:ip]
+            node.vm.provider "virtualbox" do |v|
+              v.memory = 4096
+            end
+             node.vm.provision "ansible" do |ansible|
+               ansible.playbook = "ansible/playbooks/allweb.yml"
+               ansible.tags = "all"
+             end
+        end
+    end
+end

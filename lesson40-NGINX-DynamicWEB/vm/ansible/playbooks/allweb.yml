@@ -1,0 +1,12 @@
+---
+- hosts: web
+  name: install laravel/django/react
+  become: true
+  roles:
+    - role: "../roles/allweb"
+
+
+
+
+
+
