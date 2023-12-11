@@ -1,0 +1,28 @@
+---
+  - name: Copy percona configuration
+    copy:
+      src: "{{ item }}"
+      dest: "/etc/my.cnf.d/"
+    with_fileglob:
+      - files/etc/my.cnf.d/*
+
+  - name: Restart MySQL
+    service:
+      name: mysql
+      state: restarted
+
+  - name: Copy dump from host machine to local
+    copy:
+      src: dump.sql
+      dest: /tmp/dump.sql
+    
+  - name: Restore db from dump
+    shell: mysql -uroot -p'{{ mysql_password }}' < /tmp/dump.sql
+
+  - name: Setup slave
+    shell: mysql -uroot -p'{{ mysql_password }}' -e 'CHANGE MASTER TO MASTER_HOST="192.168.11.150",MASTER_USER="{{ replica_user }}", MASTER_PASSWORD="{{ replica_password }}",MASTER_AUTO_POSITION=1'
+    ignore_errors: yes
+     
+  - name: Start SLAVE   
+    shell: mysql -uroot -p'{{ mysql_password }}' -e 'START SLAVE;'
+...

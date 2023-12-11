@@ -1,0 +1,84 @@
+---
+
+# Installation tasks for Ubuntu
+# https://www.percona.com/doc/percona-server/8.0/installation/apt_repo.html
+
+- name: "Install gnupg"
+  apt:
+    name: gnupg2
+    update_cache: yes
+
+
+- name: "Install percona-release package"
+  apt:
+    deb: "https://repo.percona.com/apt/percona-release_latest.{{ ansible_distribution_release }}_all.deb"
+
+- name: "Update apt cache"
+  apt:
+    update_cache: yes
+
+# https://www.percona.com/doc/percona-server/LATEST/installation/apt_repo.html
+- name: "Enable Percona repository (Percona version >= 8)"
+  command: "percona-release setup ps{{ mysql_version_major }}{{ mysql_version_minor }}"
+  when: mysql_version_major|int >= 8
+  changed_when: False     # TODO: check for task idempotency
+
+- name: "Install percona packages and dependencies on Ubuntu (Percona version >= 8)"
+  apt:
+    name:
+      - "percona-server-server={{ mysql_version_major }}.{{ mysql_version_minor }}*"
+      - "percona-server-client={{ mysql_version_major }}.{{ mysql_version_minor }}*"
+      - "percona-toolkit"
+    state: "present"
+  when: mysql_version_major|int >= 8
+
+
+- name: "Install pymysql3"
+  apt:
+    name:
+      - python3-pymysql
+  tags: pymysql
+
+
+- name: "Install mc, percona-toolkit and Percona Xtrabackup"
+  apt:
+    name:
+      - percona-xtrabackup-80
+      - mc
+      - percona-toolkit
+      - zstd
+      - lz4
+    update_cache: yes
+
+- name: "Adjust permissions of datadir"
+  file:
+    path: "{{ mysql_datadir }}"
+    owner: "mysql"
+    group: "mysql"
+    mode: 0700
+    state: "directory"
+
+
+- name: Start mysql
+  service:
+    name: mysql
+    state: started
+
+- name: "Set the root password"
+  mysql_user:
+    name: root
+    host: "{{ item }}"
+    password: "{{ mysql_password }}"
+    check_implicit_admin: yes
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  with_items:
+    - "{{ ansible_hostname }}"
+    - "127.0.0.1"
+    - "::1"
+    - "localhost"
+
+
+####
+
+
