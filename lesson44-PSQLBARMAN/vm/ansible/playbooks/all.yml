@@ -1,0 +1,54 @@
+---
+
+
+
+- name: Install percona to master and slave
+  hosts: all
+  become: True
+  gather_facts: True
+  roles:
+    - "../roles/percona-install"
+
+  vars:
+    mysql_version_major: "8"
+    mysql_version_minor: "0"
+    mysql_password: test2023!
+    replica_user: repl
+    replica_password: testrepl2023!
+    mysql_datadir: "/var/lib/mysql"
+
+- name: Install percona to master and slave
+  hosts: master
+  become: True
+  gather_facts: True
+  roles:
+    - "../roles/master-config"
+
+  vars:
+    mysql_version_major: "8"
+    mysql_version_minor: "0"
+    mysql_password: test2023!
+    replica_user: repl
+    replica_password: testrepl2023!
+    mysql_datadir: "/var/lib/mysql"
+
+- name: Install percona to master and slave
+  hosts: slave
+  become: True
+  gather_facts: True
+  roles:
+    - "../roles/slave-config"
+
+  vars:
+    mysql_version_major: "8"
+    mysql_version_minor: "0"
+    mysql_password: test2023!
+    replica_user: repl
+    replica_password: testrepl2023!
+    mysql_datadir: "/var/lib/mysql"    
+...
+
+
+
+
+

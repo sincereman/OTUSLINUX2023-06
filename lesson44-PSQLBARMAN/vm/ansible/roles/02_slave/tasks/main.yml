@@ -1,0 +1,143 @@
+---
+
+
+# Установим gnupg для ключа репозитория
+
+- name: "Install gnupg"
+  apt:
+    name: gnupg2
+    update_cache: yes
+
+# добавим ключ репозитория
+
+- name: Add PostgreSQL apt key
+  ansible.builtin.apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+
+## Добавим репозиторий
+
+- name: Add PostgreSQL repository
+  apt_repository:
+    repo: deb https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main
+    state: present
+
+# Установим Postgres
+
+- name: Install PostgreSQL 16
+  apt:
+    name:
+      - postgresql-16
+    update_cache: yes
+    state: present
+
+
+# Установка acl для след блока
+- name: install acl
+  apt:
+    name:
+      - acl
+    state: present
+    update_cache: true
+  tags: repluser
+# требует ansible-galaxy collection install community.postgresql
+
+# Установка python-пакетов для модулей psql
+- name: install base tools
+  apt:
+    name:
+      - python3-pexpect
+      - python3-psycopg2
+    state: present
+    update_cache: true
+
+
+    # ## install pexpect for ansible ansible.builtin.expect
+- name: Install python-pip for pexpect promt answering
+  yum:
+    name: python3-pip
+    state: latest
+  tags:
+    - install-python-pip
+
+- name: Pip install pexpect
+  pip:
+    name: pexpect
+  tags:
+    - install-pexpect
+
+#Остановливаем postgresql на хосте slave
+- name: stop postgresql-server on 
+  service: 
+    name: postgresql
+    state: stopped    
+
+# Проверяем, что postgres на хосте ещё не инициализирован
+- name: check init 
+  stat:
+    path: /var/lib/postgresql/16/main/
+  register: stat_result
+
+
+#Удаляем содержимое каталога /var/lib/pgsql/16/data/
+- name: Remove files from data catalog
+  file:
+    path: /var/lib/postgresql/16/main/
+    state: absent
+
+
+ #Копируем данные с master на slave
+- name: copy files from master to slave
+  become_user: postgres
+  expect:
+    command: 'pg_basebackup -R -h {{ master_ip }} -U  replication -p 5432 -D /var/lib/postgresql/16/main -P'
+    responses: 
+      '.*Password*': "{{ replicator_password }}"
+
+
+- name: "Copy database configuration"
+  template:
+    src: "templates/full_postgresql.conf.j2"
+    dest: "/etc/postgresql/16/main/postgresql.conf"
+    owner: postgres
+    group: postgres
+    mode: 0644
+  when: (ansible_hostname == "master")
+  tags: conf
+
+- name: "Copy user access configuration"
+  template:
+    src: "templates/pg_hba.conf.j2"
+    dest: "/etc/postgresql/16/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: 0640
+  tags: conf
+
+# Запускаем postgresql
+- name: enable and start service
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+  tags: conf
+
+### конец общей части
+
+
+####Barman
+
+# Установим Barman-cli
+
+- name: Install barman-cli
+  apt:
+    name:
+      - barman-cli
+    update_cache: yes
+    state: present
+  tags: barman
+
+
+
+

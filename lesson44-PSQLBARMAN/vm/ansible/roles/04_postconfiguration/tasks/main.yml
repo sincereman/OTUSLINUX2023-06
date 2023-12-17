@@ -1,0 +1,137 @@
+---
+
+# Установка python-пакетов для модулей psql
+- name: install base tools
+  apt:
+    name:
+      - python3-pexpect
+      - python3-psycopg2
+    state: present
+    update_cache: true
+
+
+- name: generate SSH key for postgres
+  user:
+    name: postgres
+    generate_ssh_key: yes
+    ssh_key_type: rsa
+    ssh_key_bits: 4096
+    force: no
+  when: (ansible_hostname == "master")
+
+
+- name: generate SSH key for barman
+  user:
+    name: barman
+    shell: /bin/bash
+    generate_ssh_key: yes
+    ssh_key_type: rsa
+    ssh_key_bits: 4096
+    force: no
+  when: (ansible_hostname == "barman")
+
+
+
+#  Забираем содержимое открытого ключа postgres c хоста master
+- name: fetch all public ssh keys node1
+  shell: cat /var/lib/postgresql/.ssh/id_rsa.pub
+  register: ssh_keys
+  when: (ansible_hostname == "master")
+
+#  Копируем ключ с barman на master
+- name: transfer public key to barman
+  delegate_to: barman
+  authorized_key:
+    key: "{{ ssh_keys.stdout }}"
+    comment: "{{ansible_hostname}}"
+    user: barman
+  when: (ansible_hostname == "master")  
+
+#  Забираем содержимое открытого ключа barman c хоста barman 
+- name: fetch all public ssh keys barman
+  shell: cat /var/lib/barman/.ssh/id_rsa.pub
+  register: ssh_keys
+  when: (ansible_hostname == "barman")
+
+#  Копируем ключ с node1 на barman
+- name: transfer public key to barman
+  delegate_to: master
+  authorized_key:
+    key: "{{ ssh_keys.stdout }}"
+    comment: "{{ansible_hostname}}"
+    user: postgres
+  when: (ansible_hostname == "barman")
+
+#CREATE USER barman SUPERUSER;
+- name: Create barman user
+  become_user: postgres
+  postgresql_user:
+    name: barman
+    password: '{{ barman_user_password }}'
+    role_attr_flags: SUPERUSER 
+  ignore_errors: true
+  when: (ansible_hostname == "master")
+
+ # Добавляем разрешения для поключения с хоста barman
+- name: Add permission for barman
+  lineinfile:
+    path: "/etc/postgresql/16/main/pg_hba.conf"
+    line: 'host    all   {{ barman_user }}    {{ barman_ip }}/32    scram-sha-256'
+  when: (ansible_hostname != "barman") 
+
+# Добавляем разрешения для подключения с хоста barman
+- name: Add permission for barman
+  lineinfile:
+    path: "/etc/postgresql/16/main/pg_hba.conf"
+    line: 'host    replication   {{ barman_user }}    {{ barman_ip }}/32    scram-sha-256'
+  when: (ansible_hostname != "barman")
+
+
+# Перезагружаем службу postgresql-server
+- name: restart postgresql-server on master
+  service: 
+    name: postgresql
+    state: restarted
+  when: (ansible_hostname == "master")
+
+# Создаём БД otus;
+- name: Create DB for backup
+  become_user: postgres
+  postgresql_db:
+    name: otus
+    encoding: UTF-8
+    template: template0
+    state: present
+  when: (ansible_hostname == "master")
+
+# Создаём таблицу test1 в БД otus;
+- name: Add tables to otus_backup
+  become_user: postgres
+  postgresql_table:
+    db: otus
+    name: sincere
+    state: present
+  when: (ansible_hostname == "master")
+
+# Копируем файл master.conf
+- name: copy master.conf
+  template:
+    src: "templates/master.conf.j2"
+    dest: /etc/barman.d/master.conf
+    owner: barman
+    group: barman
+    mode: '0755'
+  when: (ansible_hostname == "barman")
+
+- name: barman switch-wal master
+  become_user: barman
+  shell: barman switch-wal master
+  when: (ansible_hostname == "barman")
+
+- name: barman cron
+  become_user: barman
+  shell: barman cron
+  when: (ansible_hostname == "barman")
+
+
+

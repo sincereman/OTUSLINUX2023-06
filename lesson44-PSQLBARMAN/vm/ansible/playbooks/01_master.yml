@@ -1,0 +1,13 @@
+---
+- name: Install psql to master
+  hosts: master
+  become: True
+  gather_facts: True
+  roles:
+    - "../roles/01_master"
+
+  vars:
+    replicator_password: "testrepl2023!"
+    allow_world_readable_tmpfiles: true
+
+

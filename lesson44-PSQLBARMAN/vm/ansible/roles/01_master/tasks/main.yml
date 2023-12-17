@@ -1,0 +1,154 @@
+---
+
+# Установим gnupg для ключа репозитория
+
+- name: "Install gnupg"
+  apt:
+    name: gnupg2
+    update_cache: yes
+
+# добавим ключ репозитория
+
+- name: Add PostgreSQL apt key
+  ansible.builtin.apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+
+## Добавим репозиторий
+
+- name: Add PostgreSQL repository
+  apt_repository:
+    repo: deb https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main
+    state: present
+
+# Установим Postgres
+
+- name: Install PostgreSQL 16
+  apt:
+    name:
+      - postgresql-16
+    update_cache: yes
+    state: present
+
+# Проверяем, что postgres на хосте ещё не инициализирован
+- name: check init 
+  stat:
+    path: /var/lib/postgresql/16/main/pg_stat
+  register: stat_result
+
+# Выполняем инициализацию postgres
+- name: initialization setup
+  shell: /usr/lib/postgresql/16/bin/initdb
+  when: not stat_result.stat.exists
+  become: true
+  
+# Запускаем postgresql
+- name: enable and start service
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+
+### конец общей части
+
+# Установка python-пакетов для модулей psql
+- name: install base tools
+  apt:
+    name:
+      - python3-pexpect
+      - python3-psycopg2
+    state: present
+    update_cache: true
+
+# #CREATE USER replicator WITH REPLICATION Encrypted PASSWORD 'Otus2022!';
+
+
+
+#create user replicator with replication encrypted password '12345';
+# - name: Create replicator user
+#   become_user: postgres
+#   postgresql_user:
+#     name: replication
+#     password: '{{ replicator_password }}'
+#     role_attr_flags: REPLICATION 
+#   ignore_errors: true
+#   when: (ansible_hostname == "master")
+#   tags: repluser
+
+
+
+# Установка acl для след блока
+- name: install acl
+  apt:
+    name:
+      - acl
+    state: present
+    update_cache: true
+  tags: repluser
+# требует ansible-galaxy collection install community.postgresql
+
+
+- name: Create appclient user with SCRAM-hashed password
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: replication
+    password: "{{ replicator_password }}"
+    role_attr_flags: REPLICATION 
+  environment:
+    PGOPTIONS: "-c password_encryption=scram-sha-256"
+  tags: repluser
+
+#Остановливаем postgresql на хосте master
+- name: stop postgresql-server on 
+  service: 
+    name: postgresql
+    state: stopped
+  when: (ansible_hostname == "master")
+
+- name: "Copy database configuration"
+  template:
+    src: "templates/full_postgresql.conf.j2"
+    dest: "/etc/postgresql/16/main/postgresql.conf"
+    owner: postgres
+    group: postgres
+    mode: 0644
+  when: (ansible_hostname == "master")
+  tags: backconf
+
+- name: "Copy user access configuration"
+  template:
+    src: "templates/pg_hba.conf.j2"
+    dest: "/etc/postgresql/16/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: 0640
+  tags: backconf
+
+#Перезапускаем службу  postgresql
+- name: restart postgresql-server on master
+  service: 
+    name: postgresql
+    state: restarted
+  when: (ansible_hostname == "master")
+  tags: backconf
+
+####Barman
+
+# Установим Barman-cli
+
+- name: Install barman-cli
+  apt:
+    name:
+      - barman-cli
+    update_cache: yes
+    state: present
+  tags: barman
+
+
+
+
+
+
+

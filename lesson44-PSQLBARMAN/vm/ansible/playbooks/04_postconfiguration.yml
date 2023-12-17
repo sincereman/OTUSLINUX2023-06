@@ -1,0 +1,16 @@
+---
+- name: Postconfiguration
+  hosts: all
+  become: True
+  gather_facts: True
+  roles:
+    - "../roles/04_postconfiguration"
+
+  vars:
+    replicator_password: "testrepl2023!"
+    allow_world_readable_tmpfiles: true
+    master_ip: '192.168.57.10'
+    master_user: 'postgres'
+    barman_ip: '192.168.57.30'
+    barman_user: 'barman'
+    barman_user_password: 'Barman2023!'
