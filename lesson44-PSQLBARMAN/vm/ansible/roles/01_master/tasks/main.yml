@@ -61,22 +61,6 @@
     state: present
     update_cache: true
 
-# #CREATE USER replicator WITH REPLICATION Encrypted PASSWORD 'Otus2022!';
-
-
-
-#create user replicator with replication encrypted password '12345';
-# - name: Create replicator user
-#   become_user: postgres
-#   postgresql_user:
-#     name: replication
-#     password: '{{ replicator_password }}'
-#     role_attr_flags: REPLICATION 
-#   ignore_errors: true
-#   when: (ansible_hostname == "master")
-#   tags: repluser
-
-
 
 # Установка acl для след блока
 - name: install acl
