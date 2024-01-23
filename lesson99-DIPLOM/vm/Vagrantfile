@@ -1,0 +1,170 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+MACHINES = {
+  :star1 => {
+        :box_name => "generic/debian12",
+        :vm_name => "star1",
+        :net => [
+                   [ "77.77.1.1", 2, "255.255.255.0", "WAN1"],
+                   [ "192.168.1.254", 3, "255.255.255.0", "LAN1"], 
+                   [ "192.168.56.1", 5],
+                ]
+  },
+
+  :star2 => {
+        :box_name => "generic/debian12",
+        :vm_name => "star2",
+        :net => [
+                   [ "77.77.1.2", 2, "255.255.255.0", "WAN1"],
+                   [ "192.168.2.254", 3, "255.255.255.0", "LAN2"], 
+                   [ "192.168.56.2", 5],
+                ]
+  },
+
+  :node11 => {
+        :box_name => "generic/debian12",
+        :vm_name => "node11",
+        :net => [
+                   [ "77.77.1.11", 2, "255.255.255.0", "WAN1"],
+                   [ "192.168.11.254", 3, "255.255.255.0", "LAN11"], 
+                   [ "192.168.56.11", 5],
+                ]
+  },
+
+  :node12 => {
+        :box_name => "generic/debian12",
+        :vm_name => "node12",
+        :net => [
+                   [ "77.77.1.12", 2, "255.255.255.0", "WAN1"],
+                   [ "192.168.12.254", 3, "255.255.255.0", "LAN12"], 
+                   [ "192.168.56.12", 5],
+                ]
+  },
+
+  :node13 => {
+        :box_name => "generic/debian12",
+        :vm_name => "node13",
+        :net => [
+                   [ "77.77.1.13", 2, "255.255.255.0", "WAN1"],
+                   [ "192.168.13.254", 3, "255.255.255.0", "LAN13"], 
+                   [ "192.168.56.13", 5],
+                ]
+  },
+
+  :node222 => {
+        :box_name => "generic/debian12",
+        :vm_name => "node222",
+        :net => [
+                   [ "77.77.1.222", 2, "255.255.255.0", "WAN1"],
+                   [ "192.168.222.254", 3, "255.255.255.0", "LAN222"], 
+                   [ "192.168.56.222", 5],
+                ]
+  },
+
+  :mon222 => {
+    :box_name => "generic/debian12",
+    :vm_name => "mon223",
+    :net => [
+               [ "192.168.222.10", 2, "255.255.255.0", "LAN222"],
+               [ "192.168.56.223", 5],
+            ]
+},
+
+  :node225 => {
+        :box_name => "generic/debian12",
+        :vm_name => "node225",
+        :net => [
+                   [ "77.77.1.225", 2, "255.255.255.0", "WAN1"],
+                   [ "192.168.225.254", 3, "255.255.255.0", "LAN225"], 
+                   [ "192.168.56.225", 5],
+                ]
+  },
+
+  :web1 => {
+    :box_name => "generic/debian12",
+    :vm_name => "web1",
+    :net => [
+               [ "192.168.225.10", 2, "255.255.255.0", "LAN225"],
+               [ "192.168.56.226", 5],
+            ]
+  },
+
+  :web2 => {
+    :box_name => "generic/debian12",
+    :vm_name => "web2",
+    :net => [
+               [ "192.168.225.11", 2, "255.255.255.0", "LAN225"],
+               [ "192.168.56.227", 5],
+            ]
+  },
+
+  :database1 => {
+    :box_name => "generic/debian12",
+    :vm_name => "database1",
+    :net => [
+               [ "192.168.225.20", 2, "255.255.255.0", "LAN225"],
+               [ "192.168.56.228", 5],
+            ]
+  },
+
+  :database2 => {
+    :box_name => "generic/debian12",
+    :vm_name => "database2",
+    :net => [
+               [ "192.168.225.21", 2, "255.255.255.0", "LAN225"],
+               [ "192.168.56.229", 5],
+            ]
+  },
+
+  :backup1 => {
+    :box_name => "generic/debian12",
+    :vm_name => "backup1",
+    :net => [
+               [ "192.168.225.40", 2, "255.255.255.0", "LAN225"],
+               [ "192.168.56.230", 5],
+            ]
+  },
+
+  :log1 => {
+    :box_name => "generic/debian12",
+    :vm_name => "log1",
+    :net => [
+               [ "192.168.225.50", 2, "255.255.255.0", "LAN225"],
+               [ "192.168.56.231", 5],
+            ]
+  },
+
+
+}
+
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+
+    config.vm.define boxname do |box|
+   
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxconfig[:vm_name]
+      
+      box.vm.provider "virtualbox" do |v|
+        v.memory = 1024
+        v.cpus = 1
+       end
+
+
+      boxconfig[:net].each do |ipconf|
+        box.vm.network("private_network", ip: ipconf[0], adapter: ipconf[1], netmask: ipconf[2], virtualbox__intnet: ipconf[3])
+      end
+
+
+      box.vm.provision "shell", inline: <<-SHELL
+        mkdir -p ~root/.ssh
+        cp ~vagrant/.ssh/auth* ~root/.ssh
+      SHELL
+
+    end
+  end
+end
+

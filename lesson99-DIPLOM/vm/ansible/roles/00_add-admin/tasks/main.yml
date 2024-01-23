@@ -1,0 +1,38 @@
+---
+
+- name: Create user
+  user:
+    name: "{{ userhostadmin }}" # Username
+    password: "{{ userhostadminpassword }}"  # Encrypted password
+    state: present  # Ensure the user is present
+    createhome: yes  # Create the user's home directory
+    shell: /bin/bash
+  tags: createuser
+
+- name: Make sure we have a 'sudo' group
+  group:
+    name: sudo
+    state: present
+
+- name: Allow 'sudo' group to have passwordless sudo
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%sudo'
+    line: '%sudo	ALL=(ALL:ALL) ALL'
+    validate: 'visudo -cf %s'
+
+- name: Add users to sudo group
+  user:
+    name: "{{ userhostadmin }}"
+    groups: sudo
+    append: yes
+    state: present
+    createhome: yes
+
+# - name: Set up authorized keys for the deployer user
+#   authorized_key:
+#     user: {{ userhostadmin }}
+#     key: "{{item}}"
+#   with_file:
+#     - /home/railsdev/.ssh/id_rsa.pub
