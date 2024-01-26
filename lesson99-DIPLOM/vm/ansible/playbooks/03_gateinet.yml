@@ -1,0 +1,8 @@
+---
+
+- name: Playbook of "03_gateinet"
+  hosts:
+    - gateway
+  become: true
+  roles:
+    - role: '../roles/03_gateinet'

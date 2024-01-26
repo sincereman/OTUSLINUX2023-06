@@ -1,0 +1,35 @@
+---
+- name: systemctl daemon reload
+  systemd:
+    daemon_reload: yes
+
+- name: service restart rsyslog
+  systemd: 
+    state: restarted
+    name: rsyslog
+
+- name: enable nginx
+  systemd:
+    name: nginx
+    enabled: yes
+
+- name: start nginx
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: reload nginx
+  systemd:
+    state: reloaded
+    name: nginx
+
+- name: service restart nginx
+  systemd:
+    state: restarted
+    name: nginx
+
+- name: service restart auditd
+  systemd:
+    state: restarted
+    name: auditd

@@ -1,0 +1,8 @@
+---
+
+- name: Playbook of "04_node222"
+  hosts:
+    - node222
+  become: true
+  roles:
+    - role: '../roles/04_node222'

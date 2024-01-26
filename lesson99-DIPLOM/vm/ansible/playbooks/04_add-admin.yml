@@ -1,0 +1,9 @@
+---
+
+- name: Playbook of "00_add-admin"
+  hosts:
+    - node222
+    - gw
+  become: true
+  roles:
+    - role: '../roles/04_add-admin'

@@ -1,0 +1,6 @@
+---
+- name: Playbook of client (node exporter) initialization
+  hosts: alllogs
+  become: true
+  roles:
+    - role: '../roles/10_rsyslogclient'

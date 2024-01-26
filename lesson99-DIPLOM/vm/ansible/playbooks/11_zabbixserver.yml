@@ -1,0 +1,14 @@
+---
+- name: Playbook of server zabbix initialization
+  hosts: mon222
+  become: true
+  roles:
+    - role: '../roles/11_zabbixserver'
+  
+  vars:
+    mysql_version_major: "8"
+    mysql_version_minor: "0"
+    mysql_password: Zabbix2023!
+    #replica_user: repl
+    #replica_password: testrepl2023!
+    mysql_datadir: "/var/lib/mysql"

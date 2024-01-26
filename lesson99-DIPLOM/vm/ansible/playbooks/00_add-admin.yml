@@ -1,8 +1,0 @@
----
-
-- name: Playbook of "00_add-admin"
-  hosts:
-    - all
-  become: true
-  roles:
-    - role: '../roles/00_add-admin'

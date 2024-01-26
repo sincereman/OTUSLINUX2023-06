@@ -1,0 +1,227 @@
+---
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - backupserver-datesync
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - backupserver-datesync
+
+
+# Устанавливаем инструменты анализа сети
+- name: install base tools
+  apt:
+    name:
+      - traceroute
+      - tcpdump
+      - net-tools
+      - mtr
+      - curl
+      - iperf3
+    state: present
+    update_cache: true
+  tags:
+    - netanalize
+
+
+
+#install NetworkManager
+
+
+- name: Install NetworkManager
+  apt:
+    name: network-manager
+    state: present
+  tags:
+    - NetworkManager
+
+- name: Enable Networkmanager
+  service:
+    name: NetworkManager
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - NetworkManager
+
+#disable ufw firewall
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+    - inetrouter
+
+
+ #enable forwarding for interfaces
+- name: set up forward packages across routers
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+  notify:
+    - systemctl daemon reload
+
+
+#enable forwarding for interfaces
+- name: set up forward packages across routers
+  sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    state: present
+  notify:
+    - systemctl daemon reload
+
+#enable forwarding 6 for interfaces
+- name: set up forward 6 packages across routers
+  sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: '1'
+    state: present
+  notify:
+    - systemctl daemon reload
+
+
+#disable do not accept ICMP redirects 
+- name: disable do not accept ICMP redirects 
+  sysctl:
+    name: net.ipv4.conf.all.accept_redirects
+    value: '0'
+    state: present
+  notify:
+    - systemctl daemon reload
+
+
+#disable do not accept ICMP redirects 
+- name: disable do not accept ICMP redirects 
+  sysctl:
+    name: net.ipv4.conf.all.send_redirects
+    value: '0'
+    state: present
+  notify:
+    - systemctl daemon reload
+
+
+
+# Move file ifupdown
+
+- name: Check if file exists
+  ansible.builtin.stat:
+    path: "/etc/network/interfaces"
+  register: check_file_name
+
+- name: print debug
+  ansible.builtin.debug:
+     var: check_file_name
+
+- name: Copy file with new name
+  ansible.builtin.copy:
+    remote_src: true
+    src: "/etc/network/interfaces"
+    dest: "/etc/network/interfaces.save"
+  when: check_file_name.stat.exists
+
+- name: Remove old file
+  ansible.builtin.file:
+    path: "/etc/network/interfaces"
+    state: absent
+  when: check_file_name.stat.exists
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#NMCLI Set interface
+
+- name: Add an Ethernet INET connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth0
+    ifname: eth0
+    type: ethernet
+    method4: "auto"
+    state: present
+  tags: eth0
+
+- name: Add an Ethernet WAN1 with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 10.99.1.254/24
+    state: present
+  tags: eth1
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#nmcli networking off && nmcli networking on
+
+- name: nmcli networking off 
+  shell: 
+    cmd: nmcli networking off && nmcli networking on
+
+- name: Gather current interface configuration
+  shell: 
+    cmd: nmcli
+  register: nmcli_conn
+
+- name: STDOUT nmcli_conn
+  debug: 
+    msg: "{{ nmcli_conn.stdout_lines }}"
+
+
+## NFTables
+
+- name: Enable NFTables
+  service:
+    name: nftables
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - nftables
+
+
+- name: Copy NFTables rules
+  copy: 
+    src: "files/nftables.conf"
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: 0744
+  notify: RestartNFTables
+  tags: nftconfig
+
+
+
+
+
+
+ 

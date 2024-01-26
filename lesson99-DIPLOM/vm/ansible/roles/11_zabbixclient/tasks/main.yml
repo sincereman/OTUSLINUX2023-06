@@ -1,0 +1,70 @@
+---
+
+- name: Download zabbix repo package
+  get_url:
+    url: "{{ zabbix_repo_url}}"
+    dest: /tmp/zabbix.deb
+
+- name: Install zabbix repo
+  become: true
+  apt:
+    deb: /tmp/zabbix.deb
+    state: present
+
+- name: Install zabbix agent
+  become: true
+  apt:
+    name: zabbix-agent
+    state: present
+    update_cache: yes
+
+- name: Stop service zabbix-agent
+  become: true
+  service:
+    name: zabbix-agent
+    state: stopped
+
+- name: Remove zabbix config file
+  become: true
+  file:
+    path: /etc/zabbix/zabbix_agentd.conf
+    state: absent
+
+- name: Create new zabbix config file from template
+  become: true
+  template:
+    src: "templates/zabbix_agentd.conf.j2"
+    dest: "/etc/zabbix/zabbix_agentd.conf"
+
+- name: Start service zabbix-agent
+  become: true
+  service:
+    name: zabbix-agent
+    state: started
+
+
+- name: Create a new host or update an existing hosts info
+  become: false
+  local_action:
+    module: community.zabbix.zabbix_host 
+    server_url: "{{ zabbix_url }}" 
+    login_user: "{{ zabbix_api_user }}" 
+    login_password: "{{ zabbix_api_pass }}" 
+    host_name: "{{ ansible_hostname}}"
+    visible_name: "{{ ansible_hostname }}" 
+    description: "{{ zabbix_host_description | default('') }} OS: {{  ansible_distribution | default('') }} {{  ansible_distribution_version | default('') }}"
+    link_templates: "{{ zabbix_link_templates }}" 
+    status: "{{  zabbix_host_status }}"
+    state: present 
+    inventory_mode: disabled 
+    interfaces:
+      - type: "{{ zabbix_interface_type }}" 
+        main: 1 
+        useip: "{{ zabbix_interface_use_ip }}" 
+        ip: "{{ zabbix_interface_ip }}" 
+        dns: "{{ ansible_hostname}}"
+        port: "{{ zabbix_interface_port }}"
+    loop: "{{ groups['allzabbix'] }}" 
+    run_once: true 
+    tags:
+      - add-host 

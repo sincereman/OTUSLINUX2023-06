@@ -1,0 +1,150 @@
+---
+
+## Base configure
+
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - backupserver-datesync
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - backupserver-datesync
+
+
+# Устанавливаем инструменты анализа сети
+- name: install base tools
+  apt:
+    name:
+      - traceroute
+      - tcpdump
+      - net-tools
+      - mtr
+      - curl
+      - iperf3
+      - netplan.io
+    state: present
+    update_cache: true
+  tags:
+    - netanalize
+
+ ## Rsyslog Server
+
+- name: Install the latest version of Rsyslog
+  ansible.builtin.apt:
+    name: rsyslog
+    state: latest
+  tags:
+    - rsyslog-apt-install
+    - rsyslog-server-configure
+
+- name: Remove file /etc/rsyslog.d/
+  file:
+    state: "{{ item }}"
+    path: "/etc/rsyslog.d/"
+    owner: root
+    group: root
+    mode: '0755'
+  with_items:
+    - absent
+    - directory
+  tags:
+    - rsyslog-rules-configure
+    - clear-etc-rsyslogd
+
+- name: Remove file /var/log/rsyslog/
+  file:
+    state: "{{ item }}"
+    path: "/var/log/rsyslog/"
+    owner: root
+    group: root
+    mode: '0755'
+  with_items:
+    - absent
+    - directory
+  tags:
+    - testdelete
+    - rsyslog-rules-configure
+    - clear-etc-rsyslogd
+
+
+
+- name: Copy ./rsyslog.conf to /etc/rsyslog.conf
+  copy:
+    src: ../files/etc/rsyslog/rsyslog.conf
+    dest: /etc/rsyslog.conf
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+  notify:
+    - systemctl daemon reload
+    - service restart rsyslog
+  tags:
+    - rsyslog-server-configure
+    - copy-rsyslog-conf
+
+
+- name: Rsyslog Template Ipsec Style
+  template:
+    src: ../files/etc/rsyslog/template/{{ file }}
+    dest: /etc/rsyslog.d/{{ file }}
+  vars:
+    file: "rsyslogipsec.conf"
+  notify:
+    - systemctl daemon reload
+    - service restart rsyslog
+  tags:
+    - rsyslog-server-configure
+    - copy-rsyslog-template-otus
+
+
+# - name: Rsyslog | open TCP ports
+#   shell: "{{item}}"
+#   with_items: 
+#     - iptables -A INPUT -p tcp --dport 514 -j ACCEPT
+#     - exit 0
+#   tags:
+#     - rsyslog-server-configure
+#     - rsyslog-enable-tcp
+#     - open-tcp-ports
+
+- name: Restart service rsyslog, in all cases
+  ansible.builtin.service:
+    name: rsyslog
+    state: restarted
+
+- name: check if rsyslog has port 514 open
+  shell: ss -lntup | grep rsyslogd
+  register: rsyslog_response
+  tags:
+    - rsyslog-server-configure
+    - test-rsyslog-port
+
+- name: Check port
+  fail:
+    msg: 'The system detected as fail: 514 doesnt listen'
+  when: rsyslog_response.stdout == ""
+  tags:
+    - rsyslog-server-configure
+    - test-rsyslog-port
+
+
+
+
+
