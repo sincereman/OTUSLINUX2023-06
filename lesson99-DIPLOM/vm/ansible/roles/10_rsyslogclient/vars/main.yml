@@ -1,2 +1,3 @@
-rsyslog_server: 192.168.56.231
+rsyslog_server: 10.99.1.225
+rsyslog_server1: 192.168.225.50
 rsyslog_server_syslog_port: 514

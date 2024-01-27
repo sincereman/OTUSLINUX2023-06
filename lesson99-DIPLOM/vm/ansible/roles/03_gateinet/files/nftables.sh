@@ -38,7 +38,7 @@ nft 'add rule ip filter INPUT iifname "lo" counter accept'
 
 # allow input inet to 10050 zabbix server
 
-#nft 'add rule ip filter INPUT ct state new  tcp dport 10051 counter accept comment "zabbix"'
+nft 'add rule ip filter INPUT iifname eth1 ip saddr 10.99.1.222 tcp dport 10050 counter accept comment "Zabbixserver"'
 
 # port forwarding for node222 to mon222
 
@@ -52,7 +52,7 @@ nft 'add chain nat prerouting { type nat hook prerouting priority -100; }'
 #nft 'add rule nat prerouting ip daddr 77.77.1.222 tcp dport { 10051 } dnat 192.168.222.10:10051'#
 #nft 'add rule nat postrouting masquerade'
 
-nat 'add rule nat postrouting oif { eth0 } masquerade'
+nft 'add rule nat postrouting oif { eth0 } masquerade'
 
 sudo nft list ruleset
 

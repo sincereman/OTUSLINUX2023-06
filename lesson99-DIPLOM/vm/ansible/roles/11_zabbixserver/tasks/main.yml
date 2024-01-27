@@ -42,6 +42,130 @@
 
 
 
+#install NetworkManager
+
+
+- name: Install NetworkManager
+  apt:
+    name: network-manager
+    state: present
+  tags:
+    - NetworkManager
+
+- name: Enable Networkmanager
+  service:
+    name: NetworkManager
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - NetworkManager
+
+#disable ufw firewall
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+    - netanalize
+
+
+
+
+
+# Move file ifupdown
+
+- name: Check if file exists
+  ansible.builtin.stat:
+    path: "/etc/network/interfaces"
+  register: check_file_name
+
+- name: print debug
+  ansible.builtin.debug:
+     var: check_file_name
+
+- name: Copy file with new name
+  ansible.builtin.copy:
+    remote_src: true
+    src: "/etc/network/interfaces"
+    dest: "/etc/network/interfaces.save"
+  when: check_file_name.stat.exists
+
+- name: Remove old file
+  ansible.builtin.file:
+    path: "/etc/network/interfaces"
+    state: absent
+  when: check_file_name.stat.exists
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#NMCLI Set interface
+
+
+- name: Add an Ethernet ETH0 low priority
+  community.general.nmcli:
+    conn_name: eth0
+    ifname: eth0
+    type: ethernet
+    method4: "auto"
+    route_metric4: 300
+    state: present
+  tags: eth0
+
+- name: Add an Ethernet LAN222 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 192.168.222.10/24
+    gw4: 192.168.222.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+
+- name: Add an Ethernet WAN1 with static IP configuration
+  community.general.nmcli:
+    conn_name: eth2
+    ifname: eth2
+    type: ethernet
+    ip4: 192.168.56.10/24
+    state: present
+  tags: eth2
+
+
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#nmcli networking off && nmcli networking on
+
+- name: nmcli networking off 
+  shell: 
+    cmd: nmcli networking off && nmcli networking on
+
+- name: Gather current interface configuration
+  shell: 
+    cmd: nmcli
+  register: nmcli_conn
+
+- name: STDOUT nmcli_conn
+  debug: 
+    msg: "{{ nmcli_conn.stdout_lines }}"
+
+
+
+
 ##Install Apache
 
 - name: install Apache tools
@@ -192,18 +316,7 @@
 
 #ansible-galaxy collection install community.mysql
 
-# # mysql -uroot -p
-# password
-# mysql> create database zabbix character set utf8mb4 collate utf8mb4_bin;
-# mysql> create user zabbix@localhost identified by 'password';
-# mysql> grant all privileges on zabbix.* to zabbix@localhost;
-# mysql> set global log_bin_trust_function_creators = 1;
-# mysql> quit; 
 
-# - name: Create a new database
-#   mysql_db: name=demo state=present collation=utf8_general_ci
-# - name: Create a database user
-#   mysql_user: name=root password=pws priv=*.*:ALL host=localhost 
 
 - name: Try to create database zabbix. 
   community.mysql.mysql_db:
@@ -243,36 +356,7 @@
     - setzabbixdatabase
     - zabbixdb
 
-- name: Extract Zabbix Base Tables
-  become: true
-  shell: "{{item}}"
-  with_items: 
-     # - tar -xf /usr/share/zabbix-sql-scripts/mysql/server.sql.gz  -C /home/vagrant/serverzabbix.sql
-     - zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz >> /home/vagrant/serverzabbix.sql
-  tags:
-    - zabbixextractdatabase
-    - zabbixdb
 
-
-- name: Restore database
-  community.mysql.mysql_db:
-    name: zabbix
-    login_user: root
-    login_password: "{{ mysql_password }}"
-    login_unix_socket: /run/mysqld/mysqld.sock
-    state: import
-    target: /home/vagrant/serverzabbix.sql
-  tags:
-    - zabbixdatabaseinstall
-    - zabbixdb
-
-# - name: Install Zabbix Base Tables
-#   become: true
-#   shell: "{{item}}"
-#   with_items: 
-#       - zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz | mysql --default-character-set=utf8mb4 -u zabbix -p zabbix
-#   tags:
-#     - zabbixdatabaseinstall
 
 
 - name: Set global log_bin_trust_function_creators = 0;
@@ -331,6 +415,29 @@
 
 
 
+- name: Extract Zabbix Base Tables
+  become: true
+  shell: "{{item}}"
+  with_items: 
+     # - tar -xf /usr/share/zabbix-sql-scripts/mysql/server.sql.gz  -C /home/vagrant/serverzabbix.sql
+     - zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz >> /home/vagrant/serverzabbix.sql
+  tags:
+    - zabbixextractdatabase
+    - zabbixdb
+
+
+- name: Restore database
+  community.mysql.mysql_db:
+    name: zabbix
+    login_user: root
+    login_password: "{{ mysql_password }}"
+    login_unix_socket: /run/mysqld/mysqld.sock
+    state: import
+    target: /home/vagrant/serverzabbix.sql
+  tags:
+    - zabbixdatabaseinstall
+    - zabbixdb
+
 - name: 	/etc/zabbix/zabbix_server.conf 
   ansible.builtin.lineinfile:
     path: /etc/zabbix/zabbix_server.conf 
@@ -362,12 +469,35 @@
 
 - name: Enable zabbix server
   service:
-    name: zabbix
+    name: zabbix-server
     enabled: true
   notify:
-    - restart zabbix 
+    - restartzabbixserver
 
 
+
+## NFTables
+
+- name: Enable NFTables
+  service:
+    name: nftables
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - nftables
+
+
+- name: Copy NFTables rules
+  copy: 
+    src: "files/nftables.conf"
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: 0744
+  notify: RestartNFTables
+  tags: nftconfig
 
 
  

@@ -1,0 +1,26 @@
+---
+
+- name: systemctl daemon reload
+  systemd:
+    daemon_reload: yes
+    
+- name: restart mysql
+  service:
+    name: mysql
+    state: restarted
+
+- name: start mysql
+  service:
+    name: mysql
+    state: started
+
+- name: RestartNFTables
+  service:
+    name: nftables
+    state: restarted
+
+- name: restartzabbixserver
+  service:
+    name: zabbix-server
+    state: restarted    
+...

@@ -1,6 +1,6 @@
 ---
 - name: Playbook of server zabbix initialization
-  hosts: mon222
+  hosts: zabbixserver
   become: true
   roles:
     - role: '../roles/11_zabbixserver'

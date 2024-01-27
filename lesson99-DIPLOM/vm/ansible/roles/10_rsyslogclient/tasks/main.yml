@@ -38,11 +38,19 @@
       - mtr
       - curl
       - iperf3
-      - netplan.io
     state: present
     update_cache: true
   tags:
     - netanalize
+
+# - name: uninstall netplan.io
+#   apt:
+#     name:
+#       - netplan.io
+#     state: absent
+#     update_cache: true
+#   tags:
+#     - netplan
 
  ## Rsyslog Client
 

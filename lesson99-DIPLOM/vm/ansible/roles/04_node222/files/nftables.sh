@@ -32,15 +32,28 @@ nft 'add rule ip filter INPUT ip protocol { esp, ah } accept'
 # loopback
 nft 'add rule ip filter INPUT iifname "lo" counter accept'
 
+#####ZABBIX######
+
 #allow input inet to 80 zabbix
 
 nft 'add rule ip filter INPUT ct state new  tcp dport 80 counter accept comment "HTTP"'
 
-# allow input inet to 10050 zabbix server
+#allow input inet to 443 zabbix
+
+nft 'add rule ip filter INPUT ct state new  tcp dport 443 counter accept comment "HTTPS"'
+
+# allow input inet to 10051 zabbix server
 
 nft 'add rule ip filter INPUT ct state new  tcp dport 10051 counter accept comment "zabbix"'
 
-# port forwarding for node222 to mon222
+# allow input inet to 10050 zabbix server
+
+nft 'add rule ip filter INPUT iifname  eth1  ip saddr 10.99.1.222 tcp dport 10050 counter accept comment "Zabbixserver"'
+
+nft 'add rule ip filter INPUT iifname  eth2  ip saddr 192.168.222.10 tcp dport 10050 counter accept comment "Zabbixserver"'
+
+
+# port forwarding from node222 to zabbixserver222
 
 nft 'add table nat'
 
@@ -48,9 +61,12 @@ nft 'add chain nat postrouting { type nat hook postrouting priority 100 ; }'
 
 nft 'add chain nat prerouting { type nat hook prerouting priority -100; }'
 
-nft 'add rule nat prerouting ip daddr 77.77.1.222 tcp dport { 80 } dnat 192.168.222.10:80'
-nft 'add rule nat prerouting ip daddr 77.77.1.222 tcp dport { 10051 } dnat 192.168.222.10:10051'#
+nft 'add rule nat prerouting ip daddr 10.99.1.222 tcp dport { 80 } dnat 192.168.222.10:80'
+nft 'add rule nat prerouting ip daddr 10.99.1.222 tcp dport { 443 } dnat 192.168.222.10:443'
+nft 'add rule nat prerouting ip daddr 10.99.1.222 tcp dport { 10051 } dnat 192.168.222.10:10051'
 
+
+nft 'add rule nat postrouting oif { eth1 } masquerade'
 
 sudo nft list ruleset
 

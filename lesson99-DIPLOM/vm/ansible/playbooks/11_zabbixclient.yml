@@ -9,10 +9,10 @@
   vars:
     zabbix_version: 6.0
     zabbix_repo_url: https://repo.zabbix.com/zabbix/{{ zabbix_version }}/debian/pool/main/z/zabbix-release/zabbix-release_{{ zabbix_version }}-5%2Bdebian12_all.deb
-    serverzabbix: 77.77.1.222
-    serveractive: 77.77.1.222
-    zabbix_agent_server: 77.77.1.222
-    zabbix_url: http://77.77.1.222
+    serverzabbix: "10.99.1.222, 192.168.222.10"
+    serveractive: "10.99.1.222, 192.168.222.10"
+    zabbix_agent_server: 10.99.1.222
+    zabbix_url: http://10.99.1.222
     zabbix_api_use: true 
     zabbix_api_user: Admin
     zabbix_api_pass: Zabbix2023!
@@ -20,7 +20,7 @@
     zabbix_host_groups: "Linux servers"
     zabbix_link_templates: "Linux by Zabbix agent"
     zabbix_interface_type: agent 
-    zabbix_interface_use_ip: "0" 
+    zabbix_interface_use_ip: "1" 
     zabbix_interface_ip: ""
     zabbix_host_description: "My linux server" 
     zabbix_host_status: enabled

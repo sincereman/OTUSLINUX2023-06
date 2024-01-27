@@ -9,7 +9,13 @@
     name: rsyslog
 
 
+- name: RestartNFTables
+  service:
+    name: nftables
+    state: restarted
 
-#[root@pxeserver vagrant]# echo "/usr/share/nginx/html/centos8-install *(ro)" > /etc/exports
-#[root@pxeserver vagrant]# exportfs -r
+- name: restartzabbixserver
+  service:
+    name: zabbix-server
+    state: restarted   
 

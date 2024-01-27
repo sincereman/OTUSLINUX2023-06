@@ -1,0 +1,348 @@
+---
+
+
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - backupserver-datesync
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - backupserver-datesync
+
+
+# Устанавливаем инструменты анализа сети
+- name: install base tools
+  apt:
+    name:
+      - traceroute
+      - tcpdump
+      - net-tools
+      - mtr
+      - curl
+      - iperf3
+    state: present
+    update_cache: true
+  tags:
+    - netanalize
+
+
+#install NetworkManager
+
+
+- name: Install NetworkManager
+  apt:
+    name: network-manager
+    state: present
+  tags:
+    - NetworkManager
+
+- name: Enable Networkmanager
+  service:
+    name: NetworkManager
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - NetworkManager
+
+#disable ufw firewall
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+    - netanalize
+
+
+
+
+
+# Move file ifupdown
+
+- name: Check if file exists
+  ansible.builtin.stat:
+    path: "/etc/network/interfaces"
+  register: check_file_name
+
+- name: print debug
+  ansible.builtin.debug:
+     var: check_file_name
+
+- name: Copy file with new name
+  ansible.builtin.copy:
+    remote_src: true
+    src: "/etc/network/interfaces"
+    dest: "/etc/network/interfaces.save"
+  when: check_file_name.stat.exists
+
+- name: Remove old file
+  ansible.builtin.file:
+    path: "/etc/network/interfaces"
+    state: absent
+  when: check_file_name.stat.exists
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#NMCLI Set interface
+
+
+- name: Add an Ethernet ETH0 low priority
+  community.general.nmcli:
+    conn_name: eth0
+    ifname: eth0
+    type: ethernet
+    method4: "auto"
+    route_metric4: 300
+    state: present
+  tags: eth0
+
+- name: Add an Ethernet LAN222 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 192.168.225.20/24
+    gw4: 192.168.225.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+
+
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#nmcli networking off && nmcli networking on
+
+- name: nmcli networking off 
+  shell: 
+    cmd: nmcli networking off && nmcli networking on
+
+- name: Gather current interface configuration
+  shell: 
+    cmd: nmcli
+  register: nmcli_conn
+
+- name: STDOUT nmcli_conn
+  debug: 
+    msg: "{{ nmcli_conn.stdout_lines }}"
+
+
+##Percona Base
+
+# Installation tasks for Ubuntu
+# https://www.percona.com/doc/percona-server/8.0/installation/apt_repo.html
+
+- name: "Install gnupg"
+  apt:
+    name: gnupg2
+    update_cache: yes
+
+
+- name: "Install percona-release package"
+  apt:
+    deb: "https://repo.percona.com/apt/percona-release_latest.{{ ansible_distribution_release }}_all.deb"
+
+- name: "Update apt cache"
+  apt:
+    update_cache: yes
+
+# https://www.percona.com/doc/percona-server/LATEST/installation/apt_repo.html
+- name: "Enable Percona repository (Percona version >= 8)"
+  command: "percona-release setup ps{{ mysql_version_major }}{{ mysql_version_minor }}"
+  when: mysql_version_major|int >= 8
+  changed_when: False     # TODO: check for task idempotency
+
+- name: "Install percona packages and dependencies on Ubuntu (Percona version >= 8)"
+  apt:
+    name:
+      - "percona-server-server={{ mysql_version_major }}.{{ mysql_version_minor }}*"
+      - "percona-server-client={{ mysql_version_major }}.{{ mysql_version_minor }}*"
+      - "percona-toolkit"
+    state: "present"
+  when: mysql_version_major|int >= 8
+
+
+- name: "Install pymysql3"
+  apt:
+    name:
+      - python3-pymysql
+  tags: pymysql
+
+
+- name: "Install mc, percona-toolkit and Percona Xtrabackup"
+  apt:
+    name:
+      - percona-xtrabackup-80
+      - mc
+      - percona-toolkit
+      - zstd
+      - lz4
+    update_cache: yes
+
+- name: "Adjust permissions of datadir"
+  file:
+    path: "{{ mysql_datadir }}"
+    owner: "mysql"
+    group: "mysql"
+    mode: 0700
+    state: "directory"
+
+
+- name: Start mysql
+  service:
+    name: mysql
+    state: started
+
+- name: "Set the root password"
+  mysql_user:
+    name: root
+    host: "{{ item }}"
+    password: "{{ mysql_password }}"
+    check_implicit_admin: yes
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  with_items:
+    - "{{ ansible_hostname }}"
+    - "127.0.0.1"
+    - "::1"
+    - "localhost"
+
+
+####Percona configuration
+
+
+
+- name: Copy percona configuration
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/mysql/mysql.conf.d/"
+  with_fileglob:
+    - files/etc/my.cnf.d/*
+  tags: mysqlconf
+
+
+- name: "Copy .my.cnf file into the root home folder"
+  template:
+    src: "templates/my.cnf.j2"
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: 0600
+
+- name: Restart MySQL
+  service:
+    name: mysql
+    state: restarted
+
+- name: Copy database dump file
+  copy:
+    src: etc/bet.dmp
+    dest: /tmp/bet.dmp
+
+- name: Restore database
+  mysql_db:
+    login_user: root
+    login_password: "{{ mysql_password }}"
+    name: bet
+    state: import
+    target: /tmp/bet.dmp
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+# - name: create replication user
+#   command: >
+#     mysql
+#       -uroot
+#       -p'{{ mysql_password }}'
+#       -e 'CREATE USER "{{ replica_user }}" IDENTIFIED BY mysql -uroot -p'{{ mysql_root_password }}' -e "CREATE USER "{{ replica_user }}"@'%' IDENTIFIED BY "{{ replica_password }}";GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%' IDENTIFIED BY "{{ replica_password }};'
+
+
+- name: Create database user with name 'repl' and password from vars with all database privileges
+  mysql_user:
+    login_user: root
+    login_password: "{{ mysql_password }}"
+
+    name: "{{ replica_user }}"
+    password: "{{ replica_password  }}"
+    priv: '*.*:ALL,GRANT'
+    state: present
+    host: '%'
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  tags: repluser
+
+
+
+- name: Save MySQL dump
+  shell: |
+    mysqldump > /tmp/master.sql \
+      -uroot \
+      -p'{{ mysql_password }}' \
+      --ignore-table=bet.events_on_demand \
+      --ignore-table=bet.v_same_event \
+      --all-databases \
+      --triggers \
+      --routines \
+      --master-data
+  ignore_errors: true
+
+
+- name: Get dump from master to host machine
+  fetch:
+    src: /tmp/master.sql
+    dest: master.sql
+    flat: yes
+
+## NFTables
+
+- name: Enable NFTables
+  service:
+    name: nftables
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - nftables
+
+
+- name: Copy NFTables rules
+  copy: 
+    src: "files/nftables.conf"
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: 0744
+  notify: RestartNFTables
+  tags: nftconfig
+
+
+
+...

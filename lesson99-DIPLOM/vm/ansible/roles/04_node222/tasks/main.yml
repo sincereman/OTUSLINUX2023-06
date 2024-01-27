@@ -157,7 +157,7 @@
 #NMCLI Set interface
 
 
-- name: Add an Ethernet ETH0 disable
+- name: Add an Ethernet ETH0 low priority
   community.general.nmcli:
     conn_name: eth0
     ifname: eth0
