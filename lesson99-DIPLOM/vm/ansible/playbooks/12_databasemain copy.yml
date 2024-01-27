@@ -1,0 +1,43 @@
+---
+
+- name: Install percona to master and slave
+  hosts: database1
+  become: True
+  gather_facts: True
+  roles:
+    - "../roles/12_database1-master"
+
+  vars:
+    mysql_version_major: "8"
+    mysql_version_minor: "0"
+    mysql_password: ipsec2023!
+    replica_user: repl
+    replica_password: ipsecrepl2023!
+    mysql_datadir: "/var/lib/mysql"
+
+
+    
+
+- name: Install percona to master and slave
+  hosts: database2
+  become: True
+  gather_facts: True
+  roles:
+    - "../roles/12_database2-slave"
+
+  vars:
+    mysql_version_major: "8"
+    mysql_version_minor: "0"
+    mysql_password: ipsec2023!
+    replica_user: repl
+    replica_password: ipsecrepl2023!
+    mysql_datadir: "/var/lib/mysql"
+...
+
+
+
+
+
+
+
+
