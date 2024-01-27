@@ -34,21 +34,25 @@ nft 'add rule ip filter INPUT iifname "lo" counter accept'
 
 #####ZABBIX######
 
-#allow input inet to 80 zabbix
+#allow input inet to 80 haproxy
 
 nft 'add rule ip filter INPUT ct state new  tcp dport 80 counter accept comment "HTTP"'
 
-#allow input inet to 443 zabbix
+#allow input inet to 443 haproxy
 
 nft 'add rule ip filter INPUT ct state new  tcp dport 443 counter accept comment "HTTPS"'
 
 
 
-allow input inet to 514 rsyslog1 server
+#allow input inet to 514 rsyslog1 server
 
 nft 'add rule ip filter INPUT iifname  eth1  ip saddr 10.99.1.225 tcp dport 514 counter accept comment "rsyslog1 server"'
 nft 'add rule ip filter INPUT iifname  eth2  ip saddr 192.168.225.0/24 tcp dport 514 counter accept comment "rsyslog1 server"'
 #nft 'add rule ip filter INPUT iifname  eth2  ip saddr 192.168.222.10 tcp dport 10050 counter accept comment "Zabbixserver"'
+
+#Allow zabbix
+
+nft 'add rule ip filter INPUT iifname eth1 ip saddr { 192.168.222.10, 10.99.1.222} tcp dport 10050 counter accept comment "Zabbix"'
 
 
 # port forwarding from node225 to haproxy
