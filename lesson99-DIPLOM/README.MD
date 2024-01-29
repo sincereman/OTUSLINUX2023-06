@@ -1210,5 +1210,9 @@ route add default gw 192.168.222.254
 
 
 
+ssl
+
+curl --insecure --silent --verbose --proto-default https --output /dev/null 192.168.225.10
 
 
+curl --insecure --silent --verbose --proto-default https 192.168.225.10

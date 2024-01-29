@@ -211,6 +211,56 @@
     msg: "{{ nmcli_conn.stdout_lines }}"
 
 
+##Install Haproxy
+
+- name: Install HAproxy
+  apt:
+    name: haproxy
+    state: present
+
+- name: Enable Haproxy
+  service:
+    name: haproxy
+    enabled: true
+  notify:
+    - restart haproxy  
+
+
+- name: Copy haproxycert
+  copy: 
+    src: "files/haproxy/webipsec.pem"
+    dest: /etc/haproxy/webipsec.pem
+    owner: root
+    group: root
+    mode: 0622
+
+- name: Copy haproxyconfig
+  copy: 
+    src: "files/haproxy/haproxy.cfg"
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: 0622
+  notify:
+    - restart haproxy
+  tags: haproxyconfig
+
+
+##Install IPSEC
+
+- name: Install Strongswan package
+  apt:
+    name: strongswan
+    state: present
+
+- name: Enable IPSEC Service
+  service:
+    name: ipsec
+    enabled: true
+  notify:
+    - restart IPSEC   
+
+
 ## NFTables
 
 - name: Enable NFTables

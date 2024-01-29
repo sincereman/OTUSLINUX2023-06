@@ -42,26 +42,25 @@
 
 
 
-# #install NetworkManager
+#install NetworkManager
 
 
-# - name: Install NetworkManager
-#   apt:
-#     name: NetworkManager
-#     state: present
-#   tags:
-#     - NetworkManager
+- name: Install NetworkManager
+  apt:
+    name: network-manager
+    state: present
+  tags:
+    - NetworkManager
 
-# #install NetworkManager
-
-
-# - name: Install NetworkManager
-#   apt:
-#     name: NetworkManager
-#     state: present
-#   tags:
-#     - NetworkManager
-
+- name: Enable Networkmanager
+  service:
+    name: NetworkManager
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - NetworkManager
 
 #disable ufw firewall
 - name: Disable ufw services if enabled
@@ -73,9 +72,6 @@
   tags:
     - ufwoff
     - inetrouter
-
-
-
 
 
  #enable forwarding for interfaces
@@ -127,6 +123,95 @@
     - systemctl daemon reload
 
 
+
+# Move file ifupdown
+
+- name: Check if file exists
+  ansible.builtin.stat:
+    path: "/etc/network/interfaces"
+  register: check_file_name
+
+- name: print debug
+  ansible.builtin.debug:
+     var: check_file_name
+
+- name: Copy file with new name
+  ansible.builtin.copy:
+    remote_src: true
+    src: "/etc/network/interfaces"
+    dest: "/etc/network/interfaces.save"
+  when: check_file_name.stat.exists
+
+- name: Remove old file
+  ansible.builtin.file:
+    path: "/etc/network/interfaces"
+    state: absent
+  when: check_file_name.stat.exists
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#NMCLI Set interface
+
+
+- name: Add an Ethernet ETH0 low priority
+  community.general.nmcli:
+    conn_name: eth0
+    ifname: eth0
+    type: ethernet
+    method4: "auto"
+    route_metric4: 300
+    state: present
+  tags: eth0
+
+- name: Add an Ethernet LAN222 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 10.99.1.225/24
+    gw4: 10.99.1.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+
+- name: Add an Ethernet WAN1 with static IP configuration
+  community.general.nmcli:
+    conn_name: eth2
+    ifname: eth2
+    type: ethernet
+    ip4: 192.168.225.254/24
+    state: present
+  tags: eth2
+
+
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#nmcli networking off && nmcli networking on
+
+- name: nmcli networking off 
+  shell: 
+    cmd: nmcli networking off && nmcli networking on
+
+- name: Gather current interface configuration
+  shell: 
+    cmd: nmcli
+  register: nmcli_conn
+
+- name: STDOUT nmcli_conn
+  debug: 
+    msg: "{{ nmcli_conn.stdout_lines }}"
+
+
+
 #Install IPSEC
 
 - name: Install Strongswan package
@@ -153,6 +238,16 @@
   tags:
     - nftables
 
+
+- name: Copy NFTables rules
+  copy: 
+    src: "files/nftables.conf"
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: 0744
+  notify: RestartNFTables
+  tags: nftconfig
 
 
 

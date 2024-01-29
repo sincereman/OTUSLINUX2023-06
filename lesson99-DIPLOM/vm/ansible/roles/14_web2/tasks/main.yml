@@ -168,6 +168,31 @@
   notify:
   - start nginx
 
+- name: Creates directory
+  ansible.builtin.file:
+    path: /etc/nginx/ssl
+    state: directory
+  tags:
+    - nginx-configuration
+    - ssl
+
+- name: Add webipsec sert crt
+  template:
+    src: files/ssl/webipsec.crt
+    dest: /etc/nginx/ssl/webipsec.crt
+  tags:
+    - nginx-configuration
+    - ssl
+
+- name: Add webipsec sert key
+  template:
+    src: files/ssl/webipsec.key
+    dest: /etc/nginx/ssl/webipsec.key
+  tags:
+    - nginx-configuration
+    - ssl
+
+
 - name: Replace nginx.conf
   template:
     src: templates/nginx.conf.j2
@@ -175,15 +200,17 @@
   tags:
     - nginx-configuration
     - packages
+    - ssl
   notify:
     - reload nginx
 
 - name: NGINX | Create my own page
-  shell: echo Sincere2 > /usr/share/nginx/html/index.html
+  shell: echo Sincereweb2 > /usr/share/nginx/html/index.html
   args:
     executable: /bin/bash  
   tags:
     - nginx-ownpage
+
 
 
 ## NFTables

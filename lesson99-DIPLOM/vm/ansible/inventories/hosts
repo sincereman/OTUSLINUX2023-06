@@ -8,6 +8,15 @@ rsyslog1 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_
 web1 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson99-DIPLOM/vm/.vagrant/machines/web1/virtualbox/private_key ansible_ssh_port=2206 ansible_ssh_transfer_method=scp
 web2 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson99-DIPLOM/vm/.vagrant/machines/web2/virtualbox/private_key ansible_ssh_port=2207 ansible_ssh_transfer_method=scp
 
+node11 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson99-DIPLOM/vm/.vagrant/machines/node11/virtualbox/private_key ansible_ssh_port=2208 ansible_ssh_transfer_method=scp
+node12 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson99-DIPLOM/vm/.vagrant/machines/node12/virtualbox/private_key ansible_ssh_port=2209 ansible_ssh_transfer_method=scp
+node13 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson99-DIPLOM/vm/.vagrant/machines/node13/virtualbox/private_key ansible_ssh_port=2210 ansible_ssh_transfer_method=scp
+node14 ansible_ssh_host=127.0.0.1 ansible_ssh_user=vagrant ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_ssh_private_key_file=/home/sincere/vagrantdocs/lesson99-DIPLOM/vm/.vagrant/machines/node14/virtualbox/private_key ansible_ssh_port=2211 ansible_ssh_transfer_method=scp
+
+
+
+
+
 
 [gateway]
 gw
@@ -21,9 +30,8 @@ database2
 node11
 node12
 node13
-node14
-node222
-node225
+
+
 
 [zabbixserver]
 zabbixserver222

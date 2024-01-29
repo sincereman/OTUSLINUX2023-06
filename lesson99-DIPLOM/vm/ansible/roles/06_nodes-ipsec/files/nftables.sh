@@ -32,30 +32,9 @@ nft 'add rule ip filter INPUT ip protocol { esp, ah } accept'
 # loopback
 nft 'add rule ip filter INPUT iifname "lo" counter accept'
 
-#####ZABBIX######
-
-#allow input inet to 80 haproxy
-
-nft 'add rule ip filter INPUT ct state new  tcp dport 80 counter accept comment "HTTP"'
-
-#allow input inet to 443 haproxy
-
-nft 'add rule ip filter INPUT ct state new  tcp dport 443 counter accept comment "HTTPS"'
 
 
-
-#allow input inet to 514 rsyslog1 server
-
-nft 'add rule ip filter INPUT iifname  eth1  ip saddr 10.99.1.225 tcp dport 514 counter accept comment "rsyslog1 server"'
-nft 'add rule ip filter INPUT iifname  eth2  ip saddr 192.168.225.0/24 tcp dport 514 counter accept comment "rsyslog1 server"'
-#nft 'add rule ip filter INPUT iifname  eth2  ip saddr 192.168.222.10 tcp dport 10050 counter accept comment "Zabbixserver"'
-
-#Allow zabbix
-
-nft 'add rule ip filter INPUT iifname eth1 ip saddr { 192.168.222.10, 10.99.1.222} tcp dport 10050 counter accept comment "Zabbix"'
-
-
-# port forwarding from node225 to haproxy
+# port forwarding from node222 to zabbixserver222
 
 nft 'add table nat'
 
@@ -63,9 +42,9 @@ nft 'add chain nat postrouting { type nat hook postrouting priority 100 ; }'
 
 nft 'add chain nat prerouting { type nat hook prerouting priority -100; }'
 
-#nft 'add rule nat prerouting ip daddr 10.99.1.225 tcp dport { 80 } dnat 192.168.225.254:80'
-#nft 'add rule nat prerouting ip daddr 10.99.1.225 tcp dport { 443 } dnat 192.168.225.254:443'
-nft 'add rule nat prerouting ip daddr 10.99.1.225 tcp dport { 514 } dnat 192.168.225.50:514'
+# nft 'add rule nat prerouting ip daddr 10.99.1.222 tcp dport { 80 } dnat 192.168.222.10:80'
+# nft 'add rule nat prerouting ip daddr 10.99.1.222 tcp dport { 443 } dnat 192.168.222.10:443'
+# nft 'add rule nat prerouting ip daddr 10.99.1.222 tcp dport { 10051 } dnat 192.168.222.10:10051'
 
 
 nft 'add rule nat postrouting oif { eth1 } masquerade'

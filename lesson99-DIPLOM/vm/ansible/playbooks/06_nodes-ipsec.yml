@@ -1,0 +1,8 @@
+---
+
+- name: Playbook of "06_nodes-ipsec"
+  hosts:
+    - nodes-ipsec
+  become: true
+  roles:
+    - role: '../roles/06_nodes-ipsec'

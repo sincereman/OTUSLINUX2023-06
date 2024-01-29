@@ -7,3 +7,8 @@
   service:
     name: nftables
     state: restarted
+
+- name: Restart IPSEC
+  service:
+    name: ipsec
+    state: restarted    

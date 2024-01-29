@@ -6,9 +6,12 @@ events {
 http {
     server {
         listen       {{ nginx_listen_port }} default_server;
+        ssl on;
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+        ssl_certificate /etc/nginx/ssl/webipsec.crt;
+        ssl_certificate_key /etc/nginx/ssl/webipsec.key;
         server_name  default_server;
         root         /usr/share/nginx/html;
-
         location / {
         }
     }
