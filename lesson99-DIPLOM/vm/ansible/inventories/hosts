@@ -69,3 +69,11 @@ database2
 backup1
 zabbixserver222
 gw
+
+[rsysloginternals]
+node225
+web1
+web2
+database1
+database2
+backup1

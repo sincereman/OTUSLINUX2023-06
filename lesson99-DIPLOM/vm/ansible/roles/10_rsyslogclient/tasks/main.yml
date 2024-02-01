@@ -108,16 +108,33 @@
     - copy-rsyslog-conf
 
 
-- name: Rsyslog simple template
+- name: Rsyslog simple template externalshost
   template:
-    src: ../files/etc/rsyslog/template/all_logs.conf
+    src: ../files/etc/rsyslog/template/all_logs_externals.conf
     dest: /etc/rsyslog.d/all_logs.conf
   notify:
     - systemctl daemon reload
     - service restart rsyslog
+  when:
+    - inventory_hostname not in groups["rsysloginternals"]
   tags:
     - rsyslog-client-configure
     - copy-rsyslog-template-alllogs
+
+
+- name: Rsyslog simple template internalshost
+  template:
+    src: ../files/etc/rsyslog/template/all_logs_internals.conf
+    dest: /etc/rsyslog.d/all_logs.conf
+  notify:
+    - systemctl daemon reload
+    - service restart rsyslog
+  when:
+    - inventory_hostname in groups["rsysloginternals"]
+  tags:
+    - rsyslog-client-configure
+    - copy-rsyslog-template-alllogs
+
 
 - name: Restart service rsyslog, in all cases
   ansible.builtin.service:

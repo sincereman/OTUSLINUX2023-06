@@ -2,7 +2,7 @@
 
 ## Дипломный проект
 
-### Тема: Организация сетевой связности сети IPSEC (GRE over IPSEC) - на транспортном уровне через центральный узел.
+### Тема: Организация сетевой связности распределенной филиальной сети на основе IPSEC (быстрое добавление новых узлов) с управлением конфигурацией через отказоустойчивый web.
 
 Требования:
 1. Централизованная конфигурация новых и существующих узлов.
@@ -1216,3 +1216,12 @@ curl --insecure --silent --verbose --proto-default https --output /dev/null 192.
 
 
 curl --insecure --silent --verbose --proto-default https 192.168.225.10
+
+ curl --insecure --silent --verbose --proto-default https user:user@10.99.1.225/config/run_ipsec.pl
+
+
+htpasswd
+
+sudo apt install apache2-utils
+
+sudo htpasswd -c .htpasswd user

@@ -167,25 +167,102 @@
     state: present
   tags: eth0
 
-- name: Add an Ethernet LAN222 connection with static IP configuration
+#node11
+
+- name: Add an Ethernet WAN1 connection with static IP configuration
   community.general.nmcli:
     conn_name: eth1
     ifname: eth1
     type: ethernet
-    ip4: 10.99.1.225/24
+    ip4: 10.99.1.11/24
     gw4: 10.99.1.254
     route_metric4: 100
     state: present
   tags: eth1
+  when: ansible_hostname == 'node11'  
 
-- name: Add an Ethernet WAN1 with static IP configuration
+- name: Add an Ethernet LAN11 with static IP configuration
   community.general.nmcli:
     conn_name: eth2
     ifname: eth2
     type: ethernet
-    ip4: 192.168.225.254/24
+    ip4: 192.168.11.254/24
     state: present
   tags: eth2
+  when: ansible_hostname == 'node11'
+
+#node12
+
+- name: Add an Ethernet WAN1 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 10.99.1.12/24
+    gw4: 10.99.1.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+  when: ansible_hostname == 'node12'  
+
+- name: Add an Ethernet LAN12 with static IP configuration
+  community.general.nmcli:
+    conn_name: eth2
+    ifname: eth2
+    type: ethernet
+    ip4: 192.168.12.254/24
+    state: present
+  tags: eth2
+  when: ansible_hostname == 'node12'
+
+#node13
+
+- name: Add an Ethernet WAN1 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 10.99.1.13/24
+    gw4: 10.99.1.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+  when: ansible_hostname == 'node13'  
+
+
+- name: Add an Ethernet LAN13 with static IP configuration
+  community.general.nmcli:
+    conn_name: eth2
+    ifname: eth2
+    type: ethernet
+    ip4: 192.168.13.254/24
+    state: present
+  tags: eth2
+  when: ansible_hostname == 'node13'
+
+#node14 
+
+- name: Add an Ethernet WAN1 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 10.99.1.14/24
+    gw4: 10.99.1.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+  when: ansible_hostname == 'node14'  
+
+- name: Add an Ethernet LAN14 with static IP configuration
+  community.general.nmcli:
+    conn_name: eth2
+    ifname: eth2
+    type: ethernet
+    ip4: 192.168.14.254/24
+    state: present
+  tags: eth2
+  when: ansible_hostname == 'node14'
 
 
 
@@ -212,19 +289,6 @@
 
 
 
-#Install IPSEC
-
-- name: Install Strongswan package
-  apt:
-    name: strongswan
-    state: present
-
-- name: Enable IPSEC Service
-  service:
-    name: ipsec
-    enabled: true
-  notify:
-    - restart IPSEC   
 
 ## NFTables
 
@@ -235,6 +299,7 @@
     state: started
   notify:
     - systemctl daemon reload
+    - RestartNFTables
   tags:
     - nftables
 
@@ -250,5 +315,95 @@
   tags: nftconfig
 
 
+#Install IPSEC
 
- 
+- name: Install Strongswan package
+  apt:
+    name: strongswan
+    state: present
+
+- name: Enable IPSEC Service
+  service:
+    name: ipsec
+    enabled: true
+  notify:
+    - restart IPSEC   
+
+
+- name: Recursively remove directory /data/config
+  ansible.builtin.file:
+    path: /data
+    state: absent
+  tags:
+    - webipsecconfig
+
+
+- name: Creates directory /data/config
+  ansible.builtin.file:
+    path: /data/config
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+- name: Creates directory /data/config/bin
+  ansible.builtin.file:
+    path: /data/config/bin
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+- name: Creates directory /data/config/tmp
+  ansible.builtin.file:
+    path: /data/config/tmp
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+- name: Creates directory /data/config/install
+  ansible.builtin.file:
+    path: /data/config/install
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+
+- name: get update_run ipsec module
+  get_url:
+    url: https://user:user@10.99.1.225/config/bin/update_run.pl
+    dest: /data/config/install/update_run_first.pl
+    validate_certs: false
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+# - name: perlscript ipsec
+#   ansible.builtin.shell: |
+#     perl /data/config/install/update_run_first.pl &&
+#     perl /data/config/bin/update_run.pl &&
+#     perl /data/config/bin/run_ipsec.pl -force
+#   tags:
+#     - perlinstall
+
+
+- name: Run multiple commands
+  ansible.builtin.command: "{{ item }}"
+  with_items:
+    - perl /data/config/install/update_run_first.pl
+    - perl /data/config/bin/update_run.pl
+    - perl /data/config/bin/run_ipsec.pl -force
+  tags:
+    - perlinstall

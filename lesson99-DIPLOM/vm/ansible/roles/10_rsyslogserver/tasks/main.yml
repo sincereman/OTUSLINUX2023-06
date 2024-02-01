@@ -214,6 +214,33 @@
     - copy-rsyslog-conf
 
 
+- name: Creates directory /data/config
+  ansible.builtin.file:
+    path: /var/log/messages
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - rsysloglogrotate
+
+
+- name: Copy ./rsyslog to /etc/logrotate.d/rsyslog
+  copy:
+    src: ../files/etc/logrotate/rsyslog.conf
+    dest: /etc/logrotate.d/rsyslog.conf
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+  notify:
+    - systemctl daemon reload
+    - service restart rsyslog
+  tags:
+    - rsyslog-server-configure
+    - copy-rsyslog-conf
+    - rsysloglogrotate
+
+
 - name: Rsyslog Template Ipsec Style
   template:
     src: ../files/etc/rsyslog/template/{{ file }}
