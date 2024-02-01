@@ -49,6 +49,9 @@ nft 'add chain nat prerouting { type nat hook prerouting priority -100; }'
 
 nft 'add rule nat postrouting oif { eth1 } masquerade'
 
+
+#nft 'add rule nat postrouting oif { eth1 } ipsec out reqid 1 accept'
+
 sudo nft list ruleset
 
 

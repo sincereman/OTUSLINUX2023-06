@@ -311,9 +311,15 @@
     owner: root
     group: root
     mode: 0744
-  notify: RestartNFTables
+  notify:
+    - systemctl daemon reload
+    - RestartNFTables  
   tags: nftconfig
 
+- name: RestartNFTables
+  service:
+    name: nftables
+    state: restarted
 
 #Install IPSEC
 
@@ -398,12 +404,16 @@
 #   tags:
 #     - perlinstall
 
-
-- name: Run multiple commands
-  ansible.builtin.command: "{{ item }}"
-  with_items:
-    - perl /data/config/install/update_run_first.pl
-    - perl /data/config/bin/update_run.pl
-    - perl /data/config/bin/run_ipsec.pl -force
+- name: Perl Install Ipsec Script
+  shell: perl /data/config/install/update_run_first.pl
   tags:
     - perlinstall
+    - perltest
+
+
+- name: Perl Config Ipsec Script
+  shell: perl /data/config/bin/update_run.pl && perl /data/config/bin/run_ipsec.pl -force
+  tags:
+    - perlconfig
+    - perltest
+# 
