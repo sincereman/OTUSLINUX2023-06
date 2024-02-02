@@ -53,6 +53,10 @@ nft 'add rule ip filter INPUT iifname  eth1  ip saddr 10.99.1.222 tcp dport 1005
 nft 'add rule ip filter INPUT iifname  eth2  ip saddr 192.168.222.10 tcp dport 10050 counter accept comment "Zabbixserver"'
 
 
+#Allow iperf 5201
+
+nft 'add rule ip filter INPUT ip saddr 192.168.0.0/16  tcp dport 5201 counter accept comment "IPERF3"'
+
 # port forwarding from node222 to zabbixserver222
 
 nft 'add table nat'

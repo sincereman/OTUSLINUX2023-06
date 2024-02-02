@@ -423,30 +423,16 @@
     path: "/var/log/ipsec_update.log"
     state: touch
   tags:
-    -createipsecupdatelog
+    - createipsecupdatelog
 
 
-- name: Run CRON job to load data at every 30th minute of every hour.
-  become: true
+- name: Run CRON job to load data ipsec at every 1th minute of every hour.
   cron:
     name: "ipsecconfig"
-    user: "root"
     weekday: "*"
-    minute: "1"
+    minute: "*"
     hour: "*"
-    job: 'echo ""> /var/log/ipsec_update.log && /data/config/bin/update_run.pl >> /var/log/ipsec_update.log 2>&1 && /data/config/bin/run_ipsec.pl >>/var/log/ipsec_update.log 2>&1'
-    state: present
+    job: "perl /data/config/bin/update_run.pl >> /var/log/ipsec_update.log 2>&1 & perl /data/config/bin/run_ipsec.pl >>/var/log/ipsec_update.log 2>&1"
   tags:
-    -crontabipsecupdatejob
+    - crontabipsecupdatejob
 
-
-- name: Ensure a job that runs at 2 and 5 exists. Creates an entry like "0 5,2 * * ls -alh > /dev/null"
-  ansible.builtin.cron:
-    name: "check dirs"
-    minute: "0"
-    hour: "5,2"
-    job: "ls -alh > /dev/null"
-  tags:
-    - crontabtest
-
-# 

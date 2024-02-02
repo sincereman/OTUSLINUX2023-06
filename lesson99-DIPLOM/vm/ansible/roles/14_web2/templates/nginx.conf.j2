@@ -14,5 +14,11 @@ http {
         root         /usr/share/nginx/html;
         location / {
         }
+
+        location /config {
+        auth_basic           "Config’s Area";
+        auth_basic_user_file /usr/share/nginx/html/config/.htpasswd; 
+}
+
     }
 }

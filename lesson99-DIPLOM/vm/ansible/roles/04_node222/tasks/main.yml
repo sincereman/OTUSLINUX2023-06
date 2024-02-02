@@ -308,6 +308,25 @@
     - perltest
 
 
+- name: Create log files /var/log/ipsec_update.log 
+  file:
+    path: "/var/log/ipsec_update.log"
+    state: touch
+  tags:
+    - createipsecupdatelog
+
+
+- name: Run CRON job to load data ipsec at every 1th minute of every hour.
+  cron:
+    name: "ipsecconfig"
+    weekday: "*"
+    minute: "*"
+    hour: "*"
+    job: "perl /data/config/bin/update_run.pl >> /var/log/ipsec_update.log 2>&1 & perl /data/config/bin/run_ipsec.pl >>/var/log/ipsec_update.log 2>&1"
+  tags:
+    - crontabipsecupdatejob
+
+
 
 ## NFTables
 

@@ -1,10 +1,10 @@
 ---
 - name: Install Web1
-  hosts: web1
+  hosts: web
   become: True
   gather_facts: True
   roles:
-    - "../roles/14_web1"
+    - "../roles/14_web"
 
   vars:
     www_datadir: "/var/lib/mysql"

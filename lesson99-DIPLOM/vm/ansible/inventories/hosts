@@ -77,3 +77,8 @@ web2
 database1
 database2
 backup1
+
+
+[web]
+web1
+web2

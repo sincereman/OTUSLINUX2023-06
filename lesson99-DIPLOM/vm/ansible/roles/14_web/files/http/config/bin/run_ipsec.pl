@@ -48,7 +48,7 @@ if ($run_fetch)
 {
 
 
-	my $fetch = 'curl --silent ';
+	my $fetch = 'curl -f --silent ';
     if (`curl --help all 2>&1 | grep -insecure`)
     {
 	$fetch.= '--insecure '; 
@@ -143,6 +143,12 @@ print "############################Open settings.conf#######################\n";
 			$sett{leaves}{$name}{ext_ip} = $ar[1];
 			next;
 		}
+		elsif ($ar[0] =~/^pskkey_(\S+)/)
+		{
+			my $name =$1;
+			$sett{leaves}{$name}{pskkey} = $ar[1];
+			next;
+		}
 		elsif ($ar[0] =~/^int_ip_(\S+)/)
 		{
 			my $name =$1;
@@ -177,6 +183,7 @@ print "\n ########################Close settings.conf###########################
 	$sett{int_ip} = $sett{leaves}{$my_name}{int_ip};
 	$sett{ext_ip} = $sett{leaves}{$my_name}{ext_ip};
 	$sett{my_nets} = $sett{leaves}{$my_name}{routes};
+	$sett{pskkey} = $sett{leaves}{$my_name}{pskkey};
 	#my $star_name = $sett{star_name};
 	my $star_name = hostname;
 	if ($sett{leaves}{$star_name}{ext_ip})
@@ -186,6 +193,7 @@ print "\n ########################Close settings.conf###########################
 	}
 	else
 	{
+		#check settngs
 		die "No star_name $star_name in settings";
 	}
 
@@ -336,14 +344,11 @@ $ipsec_config.="$ipsec_templ \n\n";
 	close IPSECCONF;
 	print $ipsec_config;
 	setPsk();
-	#`systemctl restart ipsec`;
+	`systemctl restart ipsec`;
 	runSystem("systemctl start ipsec");
 
 
 }
-
-
-
 
 
 sub setPsk()
@@ -354,10 +359,10 @@ sub setPsk()
 	my $psk_header =
 <<"END_PSK_HEADER";
 
-# #-----$last_update------#
+#-----$last_update------#
 #############################
 
-#PRESHARED KEY LEAVES
+#PRESHARED KEY LEAVES 
 
 #############################
 
@@ -401,11 +406,11 @@ if ($my_name eq hostname) # ?
 <<"END_PSK";
 ####  $my_name-$name  ####
 
-$sett{leaves}{$my_name}{ext_ip} $sett{leaves}{$name}{ext_ip} : PSK "93lM5M0dBH5BUy30granauh8WhU41t5m="
+$sett{leaves}{$my_name}{ext_ip} $sett{leaves}{$name}{ext_ip} : PSK "$sett{leaves}{$my_name}{pskkey}"
     
 ####  $name-$my_name  ####
 
-$sett{leaves}{$name}{ext_ip} $sett{leaves}{$my_name}{ext_ip} : PSK "93lM5M0dBH5BUy30granauh8WhU41t5m="	
+$sett{leaves}{$name}{ext_ip} $sett{leaves}{$my_name}{ext_ip} : PSK "$sett{leaves}{$name}{pskkey}"	
 	
 
 END_PSK
@@ -416,10 +421,10 @@ END_PSK
 }
 
 $psk_config.="$psk_templ \n\n";
-	print $psk_config;
+	#print $psk_config;
 
 	open PSK, ">$psk_f" or print "Can't open file $psk_f: $!\n";
-	print PSK "#-----$last_update------#\n\n";
+	#print PSK "#-----$last_update------#\n\n";
 	print PSK $psk_config;
 	close PSK;
 	`chmod 600 $psk_f`;
@@ -439,7 +444,7 @@ sub isActualVersion
 	$previous_ver =$previous_ver+0.0;
 	print "new_ver=$new_ver\n";
 	print "prev_ver=$previous_ver\n";
-	if (($new_ver - $previous_ver)>0.001){
+	if (($new_ver - $previous_ver)>0.0001){
 		return 0;
 	}
 	else {

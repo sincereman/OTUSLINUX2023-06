@@ -168,6 +168,8 @@
   notify:
   - start nginx
 
+
+
 - name: Creates directory
   ansible.builtin.file:
     path: /etc/nginx/ssl
@@ -204,13 +206,34 @@
   notify:
     - reload nginx
 
-- name: NGINX | Create my own page
-  shell: echo Sincereweb2 > /usr/share/nginx/html/index.html
-  args:
-    executable: /bin/bash  
-  tags:
-    - nginx-ownpage
+# - name: NGINX | Create my own page
+#   shell: echo Sincereweb1 > /usr/share/nginx/html/index.html
+#   args:
+#     executable: /bin/bash  
+#   tags:
+#     - nginx-ownpage
 
+- name: Recursively remove directory /usr/share/nginx/html/
+  ansible.builtin.file:
+    path: /usr/share/nginx/html/
+    state: absent
+  tags:
+    - webipsecconfig
+
+- name: Copy content of directory 'files'
+  copy:
+    src: files/http/config    # note the '/' <-- !!!
+    dest: /usr/share/nginx/html/
+  tags:
+    - webipsecconfig
+    - webipsecsettings
+
+- name: Copy index.html to  /
+  copy:
+    src: files/http/index.html    # note the '/' <-- !!!
+    dest: /usr/share/nginx/html/index.html
+  tags:
+    - webipsecconfig
 
 
 ## NFTables

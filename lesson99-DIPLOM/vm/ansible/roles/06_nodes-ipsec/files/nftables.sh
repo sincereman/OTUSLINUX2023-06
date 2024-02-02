@@ -36,9 +36,12 @@ nft 'add rule ip filter INPUT ip protocol { esp, ah } accept'
 # loopback
 nft 'add rule ip filter INPUT iifname "lo" counter accept'
 
+#Allow zabbix
+
+nft 'add rule ip filter INPUT iifname eth1 ip saddr { 192.168.222.10, 10.99.1.222} tcp dport 10050 counter accept comment "Zabbix"'
 
 
-# port forwarding from node222 to zabbixserver222
+# nat
 
 nft 'add table nat'
 

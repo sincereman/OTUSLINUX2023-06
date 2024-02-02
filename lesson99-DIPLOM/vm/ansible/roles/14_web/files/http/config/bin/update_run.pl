@@ -11,7 +11,7 @@ print "\n ####################START################## \n";
 
 my $conf_dir = "/data/config/";
 mkdir "${conf_dir}tmp" unless (-d "${conf_dir}tmp");
-my $fetch = 'curl --silent ';
+my $fetch = 'curl -f --silent ';
 if (`curl --help all 2>&1 | grep -insecure`)
 {
 	$fetch.= '--insecure '; 

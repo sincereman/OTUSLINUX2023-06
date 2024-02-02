@@ -111,6 +111,8 @@
 #NMCLI Set interface
 
 
+#web1
+
 - name: Add an Ethernet ETH0 low priority
   community.general.nmcli:
     conn_name: eth0
@@ -120,6 +122,7 @@
     route_metric4: 300
     state: present
   tags: eth0
+  when: ansible_hostname == 'web1'
 
 - name: Add an Ethernet LAN222 connection with static IP configuration
   community.general.nmcli:
@@ -131,7 +134,32 @@
     route_metric4: 100
     state: present
   tags: eth1
+  when: ansible_hostname == 'web1'
 
+#web1
+
+- name: Add an Ethernet ETH0 low priority
+  community.general.nmcli:
+    conn_name: eth0
+    ifname: eth0
+    type: ethernet
+    method4: "auto"
+    route_metric4: 300
+    state: present
+  tags: eth0
+  when: ansible_hostname == 'web2'
+
+- name: Add an Ethernet LAN222 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 192.168.225.11/24
+    gw4: 192.168.225.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+  when: ansible_hostname == 'web2'
 
 
 - name: Restart NetworkManager
@@ -213,6 +241,14 @@
 #   tags:
 #     - nginx-ownpage
 
+
+#stop nginx for not to upload 404 
+- name: start nginx
+  systemd:
+    name: nginx
+    state: stopped
+    enabled: yes
+
 - name: Recursively remove directory /usr/share/nginx/html/
   ansible.builtin.file:
     path: /usr/share/nginx/html/
@@ -226,14 +262,30 @@
     dest: /usr/share/nginx/html/
   tags:
     - webipsecconfig
+    - webipsecsettings
 
 - name: Copy index.html to  /
   copy:
-    src: files/http/index.html    # note the '/' <-- !!!
+    src: files/http/indexweb1.html    # note the '/' <-- !!!
     dest: /usr/share/nginx/html/index.html
   tags:
     - webipsecconfig
+  when: ansible_hostname == 'web1'
 
+
+- name: Copy index.html to  /
+  copy:
+    src: files/http/indexweb2.html    # note the '/' <-- !!!
+    dest: /usr/share/nginx/html/index.html
+  tags:
+    - webipsecconfig
+  when: ansible_hostname == 'web2'
+
+- name: start nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
 
 ## NFTables
 
