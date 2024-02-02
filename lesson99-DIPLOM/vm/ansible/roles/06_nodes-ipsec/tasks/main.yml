@@ -416,4 +416,37 @@
   tags:
     - perlconfig
     - perltest
+
+
+- name: Create log files /var/log/ipsec_update.log 
+  file:
+    path: "/var/log/ipsec_update.log"
+    state: touch
+  tags:
+    -createipsecupdatelog
+
+
+- name: Run CRON job to load data at every 30th minute of every hour.
+  become: true
+  cron:
+    name: "ipsecconfig"
+    user: "root"
+    weekday: "*"
+    minute: "1"
+    hour: "*"
+    job: 'echo ""> /var/log/ipsec_update.log && /data/config/bin/update_run.pl >> /var/log/ipsec_update.log 2>&1 && /data/config/bin/run_ipsec.pl >>/var/log/ipsec_update.log 2>&1'
+    state: present
+  tags:
+    -crontabipsecupdatejob
+
+
+- name: Ensure a job that runs at 2 and 5 exists. Creates an entry like "0 5,2 * * ls -alh > /dev/null"
+  ansible.builtin.cron:
+    name: "check dirs"
+    minute: "0"
+    hour: "5,2"
+    job: "ls -alh > /dev/null"
+  tags:
+    - crontabtest
+
 # 

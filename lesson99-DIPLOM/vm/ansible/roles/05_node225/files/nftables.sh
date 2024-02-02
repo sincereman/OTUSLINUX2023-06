@@ -68,7 +68,9 @@ nft 'add chain nat prerouting { type nat hook prerouting priority -100; }'
 nft 'add rule nat prerouting ip daddr 10.99.1.225 tcp dport { 514 } dnat 192.168.225.50:514'
 
 
-nft 'add rule nat postrouting oif { eth1 } masquerade'
+#nft 'add rule nat postrouting oif { eth1 } masquerade'
+
+nft 'add rule nat postrouting ip daddr != { 192.168.0.0/16 } oif { eth1 } masquerade comment "output nat except ipsec net"'
 
 sudo nft list ruleset
 

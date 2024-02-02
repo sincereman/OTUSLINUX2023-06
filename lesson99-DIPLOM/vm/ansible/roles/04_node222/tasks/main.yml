@@ -211,6 +211,104 @@
     msg: "{{ nmcli_conn.stdout_lines }}"
 
 
+#Install IPSEC
+
+- name: Install Strongswan package
+  apt:
+    name: strongswan
+    state: present
+
+- name: Enable IPSEC Service
+  service:
+    name: ipsec
+    enabled: true
+  notify:
+    - restart IPSEC   
+
+
+- name: Recursively remove directory /data/config
+  ansible.builtin.file:
+    path: /data
+    state: absent
+  tags:
+    - webipsecconfig
+
+
+- name: Creates directory /data/config
+  ansible.builtin.file:
+    path: /data/config
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+- name: Creates directory /data/config/bin
+  ansible.builtin.file:
+    path: /data/config/bin
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+- name: Creates directory /data/config/tmp
+  ansible.builtin.file:
+    path: /data/config/tmp
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+- name: Creates directory /data/config/install
+  ansible.builtin.file:
+    path: /data/config/install
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+
+- name: get update_run ipsec module
+  get_url:
+    url: https://user:user@10.99.1.225/config/bin/update_run.pl
+    dest: /data/config/install/update_run_first.pl
+    validate_certs: false
+    mode: 0755
+    owner: root
+    group: root
+  tags:
+    - webipsecconfig
+
+# - name: perlscript ipsec
+#   ansible.builtin.shell: |
+#     perl /data/config/install/update_run_first.pl &&
+#     perl /data/config/bin/update_run.pl &&
+#     perl /data/config/bin/run_ipsec.pl -force
+#   tags:
+#     - perlinstall
+
+- name: Perl Install Ipsec Script
+  shell: perl /data/config/install/update_run_first.pl
+  tags:
+    - perlinstall
+    - perltest
+
+
+- name: Perl Config Ipsec Script
+  shell: perl /data/config/bin/update_run.pl && perl /data/config/bin/run_ipsec.pl -force
+  tags:
+    - perlconfig
+    - perltest
+
+
+
 ## NFTables
 
 - name: Enable NFTables
