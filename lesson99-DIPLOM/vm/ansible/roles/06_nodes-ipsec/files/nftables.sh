@@ -20,6 +20,10 @@ nft 'add rule ip filter INPUT iifname eth2 ip saddr 192.168.0.0/16 tcp dport 22 
 #nft 'add rule ip filter INPUT iifname eth3 ip saddr 192.168.56.0/24 tcp dport 22 counter accept comment "SSH"'
 
 
+#Allow iperf 5201
+
+nft 'add rule ip filter INPUT ip saddr 192.168.0.0/16  tcp dport 5201 counter accept comment "IPERF3"'
+
 # Allow ICMP
 
 nft 'add rule ip filter INPUT ip protocol icmp accept'
