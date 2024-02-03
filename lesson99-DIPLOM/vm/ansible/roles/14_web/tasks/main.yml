@@ -287,6 +287,17 @@
     state: started
     enabled: yes
 
+- name: Run CRON job to sync www directory at every 1th minute of every hour.
+  cron:
+    name: "wwwsync"
+    weekday: "*"
+    minute: "*"
+    hour: "*"
+    job: "rsync -zvrae ssh /usr/share/nginx/html/config root@192.168.225.11:/usr/share/nginx/html"
+  tags:
+    - crontabwebjob
+  when: ansible_hostname == 'web1'
+
 ## NFTables
 
 - name: Enable NFTables
