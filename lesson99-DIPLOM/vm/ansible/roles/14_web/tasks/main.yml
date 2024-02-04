@@ -136,7 +136,7 @@
   tags: eth1
   when: ansible_hostname == 'web1'
 
-#web1
+#web2
 
 - name: Add an Ethernet ETH0 low priority
   community.general.nmcli:

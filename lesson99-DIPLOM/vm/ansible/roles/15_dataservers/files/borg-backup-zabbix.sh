@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# the envvar $REPONAME is something you should just hardcode
+
+export REPOSITORY="borg@192.168.225.40:/var/backup/{hostname}"
+
+
+# Fill in your password here, borg picks it up automatically
+export BORG_PASSPHRASE="123"
+
+
+#mysqldump
+
+mysqldump -v -h127.0.0.1 -uzabbix -pZabbix2023! zabbix | gzip > /tmp/zabbix.gz
+
+# Backup all of /home except a few excluded directories and files
+borg create -v --stats --compression lz4                 \
+    $REPOSITORY::'{hostname}-{now:%Y-%m-%d_%H:%M:%S}' /etc /usr/share/zabbix/ /tmp/zabbix.gz \
+
+# Route the normal process logging to journalctl
+2>&1
+
+# If there is an error backing up, reset password envvar and exit
+if [ "$?" = "1" ] ; then
+    export BORG_PASSPHRASE=""
+    exit 1
+fi
+
+# Prune the repo of extra backups
+borg prune -v $REPOSITORY --prefix '{hostname}-'         \
+    --keep-minutely=120                                  \
+    --keep-daily=3                                       \
+    --keep-monthly=0                                     \
+    --keep-yearly=0                                     \
+
+borg list $REPOSITORY
+
+# Unset the password
+export BORG_PASSPHRASE=""
+
+rm /tmp/zabbix.gz
+
+exit

@@ -1,0 +1,9 @@
+debian_version: 12
+
+borgrepository: /var/backup
+
+borg_user: borg
+borg_group: borg
+borg_ssh_key_name: borg_ed25519
+borg_ssh_key_file_path: /home/{{ borg_user }}/.ssh/{{ borg_ssh_key_name }}
+borg_ssh_key_type: ed25519

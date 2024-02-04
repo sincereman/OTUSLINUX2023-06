@@ -1,0 +1,7 @@
+---
+- name: Playbook of "dataservers"
+  hosts:
+    - dataservers
+  become: true
+  roles:
+    - role: '../roles/15_dataservers'

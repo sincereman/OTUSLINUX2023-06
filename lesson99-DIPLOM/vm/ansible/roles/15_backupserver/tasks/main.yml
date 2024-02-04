@@ -1,0 +1,248 @@
+---
+
+##Set timezone
+- name: set timezone
+  shell: timedatectl set-timezone Europe/Moscow
+
+#Install Chrony to time Sync
+
+- name: Synchronize datetime | Install chrony
+  apt:
+    name: chrony
+    state: latest
+  tags:
+    - backupserver-datesync
+
+#Enable Chrony Services to time Sync
+
+- name: Synchronize datetime | Turn on chronyd
+  service:
+    name: chronyd
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - backupserver-datesync
+
+
+# Устанавливаем инструменты анализа сети
+- name: install base tools
+  apt:
+    name:
+      - traceroute
+      - tcpdump
+      - net-tools
+      - mtr
+      - curl
+      - iperf3
+    state: present
+    update_cache: true
+  tags:
+    - netanalize
+
+
+#install NetworkManager
+
+
+- name: Install NetworkManager
+  apt:
+    name: network-manager
+    state: present
+  tags:
+    - NetworkManager
+
+- name: Enable Networkmanager
+  service:
+    name: NetworkManager
+    enabled: yes
+    state: started
+  notify:
+    - systemctl daemon reload
+  tags:
+    - NetworkManager
+
+#disable ufw firewall
+- name: Disable ufw services if enabled
+  shell: "if systemctl is-enabled --quiet {{ item }}; then systemctl disable {{ item }} && echo disable_ok ; fi"
+  register: output
+  changed_when: "'disable_ok' in output.stdout"
+  loop:
+    - ufw
+  tags:
+    - ufwoff
+    - netanalize
+
+
+
+
+
+# Move file ifupdown
+
+- name: Check if file exists
+  ansible.builtin.stat:
+    path: "/etc/network/interfaces"
+  register: check_file_name
+
+- name: print debug
+  ansible.builtin.debug:
+     var: check_file_name
+
+- name: Copy file with new name
+  ansible.builtin.copy:
+    remote_src: true
+    src: "/etc/network/interfaces"
+    dest: "/etc/network/interfaces.save"
+  when: check_file_name.stat.exists
+
+- name: Remove old file
+  ansible.builtin.file:
+    path: "/etc/network/interfaces"
+    state: absent
+  when: check_file_name.stat.exists
+
+- name: Restart NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+
+
+#NMCLI Set interface
+
+
+#web1
+
+- name: Add an Ethernet ETH0 low priority
+  community.general.nmcli:
+    conn_name: eth0
+    ifname: eth0
+    type: ethernet
+    method4: "auto"
+    route_metric4: 300
+    state: present
+  tags: eth0
+  when: ansible_hostname == 'web1'
+
+- name: Add an Ethernet LAN222 connection with static IP configuration
+  community.general.nmcli:
+    conn_name: eth1
+    ifname: eth1
+    type: ethernet
+    ip4: 192.168.225.40/24
+    gw4: 192.168.225.254
+    route_metric4: 100
+    state: present
+  tags: eth1
+
+
+
+# Install BorgBackup
+ 
+- name: Install borgbackup
+  apt:
+    name: "borgbackup"
+    state: present
+    update_cache: yes
+  become: true
+  tags:
+    - backupserver
+    - borgbackup
+
+#Create borg group
+
+- name: Ensure group "borg" exists
+  ansible.builtin.group:
+    name: "{{ borg_group }}"
+    state: present
+  tags:
+    - backupserver
+    - borggroup 
+
+#Create borg user with register info about home dirrectory
+
+- name: Add the user 'borg' with a primary group of 'borg'
+  ansible.builtin.user:
+    name: "{{ borg_user }}"
+    comment: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    shell: "/bin/bash"
+    append: true
+  register: user_info
+  tags:
+    - backupserver
+    - borguser
+
+#Register info
+
+- name: Save the user_info, we need them for the home_dir
+  ansible.builtin.set_fact:
+    backup_user_info: "{{ user_info }}"
+  tags:
+    - backupserver
+    - borguserinfo
+
+#Create BackupDirectory
+
+- name: Create Directory for backup (if neeeded) for {{ borg_user }}
+  block:
+    - name: Ensure directory exist
+      ansible.builtin.file:
+        path: "{{ borgrepository }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ borg_user }}"
+        group: "{{ borg_group }}"
+  tags:
+    - backupserver
+    - borguserkey
+
+
+# Create SSH Key for borg users
+
+- name: Create Directory for SSH Authorised Key (if neeeded) for {{ borg_user }}
+  block:
+    - name: Ensure directory exist
+      ansible.builtin.file:
+        path: "{{ backup_user_info.home }}/.ssh/"
+        state: directory
+        mode: "0700"
+        owner: "{{ borg_user }}"
+        group: "{{ borg_group }}"
+  tags:
+    - backupserver
+    - borguserkey
+ 
+
+#Create a file for Auth Key for backup
+
+- name: Create a file if it does not exist
+  ansible.builtin.file:
+    path: "{{ backup_user_info.home }}/.ssh/authorized_keys"
+    state: touch
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0600'
+  tags:
+    - backupserver
+    - backuprepository
+
+
+- name: Copy publickey for borg
+  template: 
+    src: "files/id_rsa.pub"
+    dest: ~borg/.ssh/
+    mode: '0600'
+  tags:
+    - dataserverborgconfig
+    - dataserverprivatekey
+
+- name: Add authorized_keys strings
+  lineinfile:
+    path: "{{ backup_user_info.home }}/.ssh/authorized_keys"
+    line: 'command="/usr/bin/borg serve" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDlI+y4Uk0bDbxHBRAtNl8YDBQ0Upp92ngGgFRwVat1rzMdWu8JxbBeFkDvvQuQUexm5nBpKyZEX2RORBgH5nCNtVMrXOHGqmrakQdJYv0BNh3I1Ol0Vis1TO5wOiLd4GDnRPR4/Sa2t3pqpg+6BXpNy1l38Xs7cwjwqQAlkGRwwx4yE5Oxw/35riTxlNmN2Ox3dMBceTUuEBQrlgM8FoTTXxNMTb/8VFGgsuOyA91VXeexWLNwgg1H8bAu4yxR7KeeS/mTG9NbzcUe2BGwXfXnt5Y3OCvipm220cy1y1N75YoYIAoRuqS6qSBYQCHDGb10uU7Mh3wTN0WyJbJutQnLqZVOGmikLKWQjm02kG/QFevcg5Zuk8Tl4iQDAkLWW6uqcegl799AmviOv0ThnMrJ0BMoFbOIT1oBDC39jm74N477uTjganpG0yIwSRfi7XFMfBzEQYFxydmJUwo3I5kVXAfRhmFXmxd3Ub5Mz9YkoCTH+qmSue3kYP2EP/XVmqE= root@dataserver'
+  tags:
+    - backupserver
+    - sshkeypubauth
+
+
+

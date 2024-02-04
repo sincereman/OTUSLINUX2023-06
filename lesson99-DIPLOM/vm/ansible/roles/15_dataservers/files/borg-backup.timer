@@ -1,0 +1,8 @@
+[Unit]
+Description=Automated Borg Backup Timer
+
+[Timer]
+OnCalendar=hourly
+
+[Install]
+WantedBy=timers.target
